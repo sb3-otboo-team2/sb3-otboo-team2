@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.clothes.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesAttributeDefDto;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesAttributeDefCreateRequest;
@@ -21,7 +22,7 @@ public class ClothesAttributeDefController {
     //    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ClothesAttributeDefDto> create(
-        @RequestBody ClothesAttributeDefCreateRequest request
+        @RequestBody @Valid ClothesAttributeDefCreateRequest request
     ) {
         ClothesAttributeDefDto dto = clothesAttributeDefService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
