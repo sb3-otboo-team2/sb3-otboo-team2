@@ -14,6 +14,7 @@ import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.exception.follow.FollowAlreadyException;
 import org.ikuzo.otboo.global.exception.follow.FollowSelfNotAllowException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -31,12 +32,13 @@ public class FollowServiceImpl implements FollowService {
      * 팔로우 등록
      *
      * @param request
-     *  - followeeId: 팔로우 신청한 UserId
-     *  - followerId: 팔로우 대상 UserId
+     *  - followeeId: 팔로우 대상 UserId
+     *  - followerId: 팔로우 신청한 UserId
      *
      * @return FollowDto
      */
     @Override
+    @Transactional
     public FollowDto follow(FollowCreateRequest request) {
         UUID followeeId = request.followeeId();
         UUID followerId = request.followerId();
