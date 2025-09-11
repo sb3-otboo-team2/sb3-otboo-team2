@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.domain.feed.entity;
+package org.ikuzo.otboo.domain.feedclothes.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -9,7 +9,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
+import org.ikuzo.otboo.domain.feed.entity.Feed;
+import org.ikuzo.otboo.global.base.BaseEntity;
 
 @Entity
 @Table(name = "feed_clothes")
@@ -17,7 +18,7 @@ import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FeedClothes extends BaseUpdatableEntity {
+public class FeedClothes extends BaseEntity {
 
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -10,7 +10,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
-import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
+import org.ikuzo.otboo.global.base.BaseEntity;
 
 @Entity
 @Table(name = "feed_likes")
@@ -18,7 +18,7 @@ import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FeedLike extends BaseUpdatableEntity {
+public class FeedLike extends BaseEntity {
 
 //    @ManyToOne(fetch = FetchType.LAZY)
 //    @JoinColumn(name = "user_id", nullable = false)

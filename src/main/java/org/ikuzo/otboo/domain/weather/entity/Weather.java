@@ -10,7 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
+import org.ikuzo.otboo.global.base.BaseEntity;
 
 @Entity
 @Table(name = "weathers")
@@ -18,7 +18,7 @@ import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class Weather extends BaseUpdatableEntity {
+public class Weather extends BaseEntity {
 
 //    @ManyToOne(fetch = FetchType.LAZY)
 //    @JoinColumn(name = "user_id", nullable = false)

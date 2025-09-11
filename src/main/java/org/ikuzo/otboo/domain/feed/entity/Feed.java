@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
 import org.ikuzo.otboo.domain.comment.entity.Comment;
+import org.ikuzo.otboo.domain.feedclothes.entity.FeedClothes;
 import org.ikuzo.otboo.domain.feedlike.entity.FeedLike;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
