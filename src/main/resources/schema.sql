@@ -252,11 +252,11 @@ CREATE TABLE "weathers" (
 DROP TABLE IF EXISTS "recommendation_clothes" CASCADE;
 
 CREATE TABLE "recommendation_clothes" (
-                                          "key" UUID NOT NULL,
+                                          "id" UUID NOT NULL,
                                           "created_at" TIMESTAMPTZ NOT NULL,
                                           "recommend_id" UUID NOT NULL,
                                           "clothes_id" UUID NOT NULL,
-                                          CONSTRAINT "PK_RECOMMENDATION_CLOTHES" PRIMARY KEY ("key"),
+                                          CONSTRAINT "PK_RECOMMENDATION_CLOTHES" PRIMARY KEY ("id"),
                                           CONSTRAINT "FK_RECOMMENDATION_RECOMMEND" FOREIGN KEY ("recommend_id") REFERENCES "recommends"("id") ON DELETE CASCADE,
                                           CONSTRAINT "FK_RECOMMENDATION_CLOTHES" FOREIGN KEY ("clothes_id") REFERENCES "clothes"("id") ON DELETE CASCADE
 );
