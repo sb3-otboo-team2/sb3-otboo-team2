@@ -281,5 +281,18 @@ CREATE TABLE "recommendation_clothes"
 -- FOLLOWS UNIQUE 추가 (중복 팔로우 방지)
 -- ===============================
 ALTER TABLE "follows"
-ADD CONSTRAINT "UK_FOLLOWS_FOLLOWER_FOLLOWING"
-UNIQUE ("follower_id", "following_id");
+    ADD CONSTRAINT "UK_FOLLOWS_FOLLOWER_FOLLOWING"
+        UNIQUE ("follower_id", "following_id");
+
+-- ===============================
+-- FEEDS WEATHER FK
+-- ===============================
+ALTER TABLE "feeds"
+    ADD CONSTRAINT "FK_FEEDS_WEATHERS"
+        FOREIGN KEY ("weather_id") REFERENCES "weathers" ("id") ON DELETE CASCADE;
+
+-- ===============================
+-- ATTRIBUTE OPTIONS UNIQUE 추가
+-- ===============================
+ALTER TABLE "attribute_options"
+    ADD CONSTRAINT "UK_OPTIONS_DEF_VALUE" UNIQUE ("definition_id", "value");
