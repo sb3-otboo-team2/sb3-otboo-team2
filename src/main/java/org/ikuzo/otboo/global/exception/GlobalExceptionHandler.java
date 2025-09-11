@@ -59,6 +59,12 @@ public class GlobalExceptionHandler {
   private HttpStatus determineHttpStatus(OtbooException exception) {
     ErrorCode errorCode = exception.getErrorCode();
 
-      return null;
+      switch (errorCode) {
+          case DUPLICATED_ATTRIBUTE_NAME:
+              return HttpStatus.BAD_REQUEST;
+          default:
+              return HttpStatus.BAD_REQUEST;
+      }
+
   }
 }

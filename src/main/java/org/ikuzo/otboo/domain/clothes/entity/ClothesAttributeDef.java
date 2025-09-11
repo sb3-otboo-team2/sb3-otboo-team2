@@ -25,6 +25,7 @@ public class ClothesAttributeDef extends BaseUpdatableEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Builder.Default
     @OneToMany(mappedBy = "definition", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AttributeOption> options = new ArrayList<>();
 }
