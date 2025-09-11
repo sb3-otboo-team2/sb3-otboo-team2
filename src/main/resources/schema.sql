@@ -276,3 +276,10 @@ CREATE TABLE "recommendation_clothes"
     CONSTRAINT "FK_RECOMMENDATION_RECOMMEND" FOREIGN KEY ("recommend_id") REFERENCES "recommends" ("id") ON DELETE CASCADE,
     CONSTRAINT "FK_RECOMMENDATION_CLOTHES" FOREIGN KEY ("clothes_id") REFERENCES "clothes" ("id") ON DELETE CASCADE
 );
+
+-- ===============================
+-- FOLLOWS UNIQUE 추가 (중복 팔로우 방지)
+-- ===============================
+ALTER TABLE "follows"
+ADD CONSTRAINT "UK_FOLLOWS_FOLLOWER_FOLLOWING"
+UNIQUE ("follower_id", "following_id");

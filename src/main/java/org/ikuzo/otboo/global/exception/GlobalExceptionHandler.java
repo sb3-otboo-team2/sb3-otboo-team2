@@ -57,14 +57,10 @@ public class GlobalExceptionHandler {
 
 
   private HttpStatus determineHttpStatus(OtbooException exception) {
-    ErrorCode errorCode = exception.getErrorCode();
-
-      switch (errorCode) {
-          case DUPLICATED_ATTRIBUTE_NAME:
-              return HttpStatus.BAD_REQUEST;
-          default:
-              return HttpStatus.BAD_REQUEST;
-      }
-
+    return switch (exception.getErrorCode()) {
+      case FOLLOW_SELF_NOT_ALLOWED, FOLLOW_ALREADY_EXISTS
+          ,DUPLICATED_ATTRIBUTE_NAME -> HttpStatus.BAD_REQUEST;
+      default -> HttpStatus.INTERNAL_SERVER_ERROR;
+    };
   }
 }
