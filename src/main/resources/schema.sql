@@ -296,3 +296,9 @@ ALTER TABLE "feeds"
 -- ===============================
 ALTER TABLE "attribute_options"
     ADD CONSTRAINT "UK_OPTIONS_DEF_VALUE" UNIQUE ("definition_id", "value");
+
+-- ===============================
+-- RECOMMENDATION CLOTHES UNIQUE 추가
+-- ===============================
+ALTER TABLE "recommendation_clothes"
+    ADD CONSTRAINT "UK_RECOMMENDATION_CLOTHES_PAIR" UNIQUE ("recommend_id", "clothes_id");

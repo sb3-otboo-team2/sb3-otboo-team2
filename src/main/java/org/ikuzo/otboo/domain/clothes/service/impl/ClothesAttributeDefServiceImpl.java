@@ -42,7 +42,9 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
         if (selectableValues != null) {
             selectableValues.stream()
-                .filter(value -> value != null && !value.isBlank())
+                .map(value -> value == null ? null : value.trim())
+                .filter(value -> value != null && !value.isEmpty())
+                .distinct()
                 .map(value -> AttributeOption.builder()
                     .value(value)
                     .definition(clothesAttributeDef)
