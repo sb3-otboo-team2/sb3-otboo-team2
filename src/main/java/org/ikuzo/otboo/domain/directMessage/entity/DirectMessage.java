@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.directMessage.entity;
+package org.ikuzo.otboo.domain.directMessage.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

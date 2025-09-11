@@ -1,6 +1,6 @@
-package org.ikuzo.otboo.follow.repository;
+package org.ikuzo.otboo.domain.follow.repository;
 
-import org.ikuzo.otboo.follow.entity.Follow;
+import org.ikuzo.otboo.domain.follow.entity.Follow;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
