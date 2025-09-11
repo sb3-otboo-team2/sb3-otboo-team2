@@ -57,8 +57,9 @@ public class GlobalExceptionHandler {
 
 
   private HttpStatus determineHttpStatus(OtbooException exception) {
-    ErrorCode errorCode = exception.getErrorCode();
-
-      return null;
+    return switch (exception.getErrorCode()) {
+      case FOLLOW_SELF_NOT_ALLOWED, FOLLOW_ALREADY_EXISTS -> HttpStatus.BAD_REQUEST;
+      default -> HttpStatus.INTERNAL_SERVER_ERROR;
+    };
   }
 }
