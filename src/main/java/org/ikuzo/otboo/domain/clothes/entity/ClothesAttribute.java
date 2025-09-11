@@ -15,7 +15,7 @@ import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 
 @Builder
 @Entity
-@Table(name = "attribute_attributes")
+@Table(name = "clothes_attributes")
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
