@@ -16,6 +16,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 
 @Builder
@@ -36,8 +37,8 @@ public class Clothes extends BaseUpdatableEntity {
     @Column(name = "type", nullable = false)
     private ClothesType type;
 
-    //    @ManyToOne(fetch = FetchType.LAZY)
-    //    private User owner;
+        @ManyToOne(fetch = FetchType.LAZY)
+        private User owner;
 
     @OneToMany(mappedBy = "clothes", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ClothesAttribute> attributes = new ArrayList<>();

@@ -10,6 +10,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.ikuzo.otboo.global.base.BaseEntity;
 
 @Builder
@@ -20,11 +22,11 @@ import org.ikuzo.otboo.global.base.BaseEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Recommend extends BaseEntity {
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "user_id", nullable = false)
-//    private User user;
-//
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "weather_id", nullable = false)
-//    private Weather weather;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "weather_id", nullable = false)
+    private Weather weather;
 }
