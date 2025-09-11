@@ -1,8 +1,6 @@
 package org.ikuzo.otboo.domain.directMessage.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,10 +12,12 @@ import org.ikuzo.otboo.global.base.BaseEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DirectMessage extends BaseEntity {
 
-    @Column(name = "sender")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender", nullable = false)
     private User sender;
 
-    @Column(name = "receiver")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiver", nullable = false)
     private User receiver;
 
     @Column(name = "content", length = 300)
