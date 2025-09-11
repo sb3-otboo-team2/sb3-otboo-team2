@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.global.base.BaseEntity;
 
 @Entity

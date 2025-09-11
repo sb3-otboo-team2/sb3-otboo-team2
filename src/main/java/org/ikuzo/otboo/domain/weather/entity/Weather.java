@@ -66,11 +66,8 @@ public class Weather extends BaseEntity {
     @Column(name = "humidity_compared")
     private Double humidityCompared;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private ZonedDateTime createdAt;
-
     @PrePersist
     public void prePersist() {
-        this.createdAt = ZonedDateTime.now();
+
     }
 }
