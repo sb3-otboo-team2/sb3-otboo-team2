@@ -1,0 +1,32 @@
+name: 🐛 Bug Report
+description: 버그가 발생했을 때 작성하는 이슈입니다.
+title: "BUG: "
+labels: [bug]
+assignees: []
+
+body:
+  - type: textarea
+    attributes:
+      label: 📄 설명
+      description: 발견된 버그에 대한 설명을 작성해 주세요.
+      placeholder: 자세히 적을수록 좋습니다! 스크린샷이 있다면 첨부해 주세요.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐞 버그 리포트
+
+        아래 항목들을 모두 확인해주세요 ✅
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: 체크리스트
+      description: 아래 항목들을 확인하고 체크해주세요
+      placeholder: |
+        - [ ] 버그 발생 지점을 특정했습니다.
+        - [ ] 버그 발생 조건을 확인했습니다.
+        - [ ] 버그를 성공적으로 디버깅했습니다.
+    validations:
+      required: true
