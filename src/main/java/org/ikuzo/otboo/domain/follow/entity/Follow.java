@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.follow.entity;
+package org.ikuzo.otboo.domain.follow.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

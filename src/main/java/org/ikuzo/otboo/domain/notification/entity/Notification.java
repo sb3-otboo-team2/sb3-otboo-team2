@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.notification.entity;
+package org.ikuzo.otboo.domain.notification.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;

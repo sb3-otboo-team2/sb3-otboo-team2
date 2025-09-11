@@ -1,6 +1,6 @@
-package org.ikuzo.otboo.notification.reppsitory;
+package org.ikuzo.otboo.domain.notification.reppsitory;
 
-import org.ikuzo.otboo.notification.entity.Notification;
+import org.ikuzo.otboo.domain.notification.entity.Notification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
