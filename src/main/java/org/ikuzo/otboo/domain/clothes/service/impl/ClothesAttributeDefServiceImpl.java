@@ -30,7 +30,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         log.info("[Service] 속성 등록 시작 - name: {}, selectableValues: {}", name, selectableValues);
 
         if (clothesAttributeDefRepository.existsByName(name)) {
-            throw new DuplicatedAttributeNameException();
+            throw new DuplicatedAttributeNameException(name);
         }
 
         ClothesAttributeDef clothesAttributeDef = ClothesAttributeDef.builder()

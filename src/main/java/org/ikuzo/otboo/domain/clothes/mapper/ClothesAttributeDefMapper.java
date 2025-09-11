@@ -1,6 +1,5 @@
 package org.ikuzo.otboo.domain.clothes.mapper;
 
-import java.util.List;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesAttributeDefDto;
 import org.ikuzo.otboo.domain.clothes.entity.AttributeOption;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
