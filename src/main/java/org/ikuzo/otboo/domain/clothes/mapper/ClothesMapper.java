@@ -6,6 +6,7 @@ import org.ikuzo.otboo.domain.clothes.dto.ClothesDto;
 import org.ikuzo.otboo.domain.clothes.entity.AttributeOption;
 import org.ikuzo.otboo.domain.clothes.entity.Clothes;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttribute;
+import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -19,18 +20,24 @@ public interface ClothesMapper {
 
     @Named("mapAttributes")
     default List<ClothesAttributeWithDefDto> mapAttributes(List<ClothesAttribute> attributes) {
-        if (attributes == null) return List.of();
-        return attributes.stream().map(attribute ->
-            new ClothesAttributeWithDefDto(
-                attribute.getDefinition().getId(),
-                attribute.getDefinition().getName(),
-                attribute.getDefinition().getOptions()
-                    .stream()
-                    .map(AttributeOption::getValue)
-                    .toList(),
-                attribute.getOptionValue()
-            )
-        ).toList();
+        if (attributes == null || attributes.isEmpty()) {
+            return List.of();
+        }
+        return attributes.stream()
+            .map(attribute -> {
+                ClothesAttributeDef def = attribute.getDefinition();
+                List<AttributeOption> options = def.getOptions();
+                List<String> selectable = (options == null)
+                    ? List.of()
+                    : options.stream().map(AttributeOption::getValue).toList();
+                return new ClothesAttributeWithDefDto(
+                    def.getId(),
+                    def.getName(),
+                    selectable,
+                    attribute.getOptionValue()
+                );
+            })
+            .toList();
     }
 
 }

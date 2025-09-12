@@ -23,6 +23,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     private final ClothesAttributeDefRepository clothesAttributeDefRepository;
     private final ClothesAttributeDefMapper mapper;
 
+//    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
     public ClothesAttributeDefDto create(ClothesAttributeDefCreateRequest request) {

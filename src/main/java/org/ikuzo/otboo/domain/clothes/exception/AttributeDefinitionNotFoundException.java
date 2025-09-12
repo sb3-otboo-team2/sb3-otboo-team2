@@ -5,8 +5,8 @@ import org.ikuzo.otboo.global.exception.ErrorCode;
 
 public class AttributeDefinitionNotFoundException extends ClothesException {
 
-    public AttributeDefinitionNotFoundException(UUID ownerId) {
+    public AttributeDefinitionNotFoundException(UUID definitionId) {
         super(ErrorCode.ATTRIBUTE_NOT_FOUND);
-        this.addDetail("ownerId", ownerId);
+        this.addDetail("definitionId", definitionId);
     }
 }

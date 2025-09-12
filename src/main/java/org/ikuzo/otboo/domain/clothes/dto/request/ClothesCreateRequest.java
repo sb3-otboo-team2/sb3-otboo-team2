@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.clothes.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -20,6 +21,7 @@ public record ClothesCreateRequest(
     @NotNull
     ClothesType type,
 
+    @Valid
     List<ClothesAttributeDto> attributes
 ) {
 
