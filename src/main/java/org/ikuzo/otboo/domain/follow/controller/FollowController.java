@@ -28,6 +28,7 @@ public class FollowController {
 
     @GetMapping("/summary")
     public ResponseEntity<FollowSummaryDto> summary(@RequestParam UUID userId) {
+        log.info("[FollowController] 팔로우 요약 정보 컨트롤러 진입 userId: {}", userId);
         FollowSummaryDto response = followService.followSummary(userId);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }

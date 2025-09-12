@@ -77,6 +77,7 @@ public class FollowServiceImpl implements FollowService {
      */
     @Override
     public FollowSummaryDto followSummary(UUID userId) {
+        log.info("[FollowService] followSummary 팔로우 요약 정보 userId: {}", userId);
         // TODO: SpringSecurity 개발 후 securityContextHolder를 통해 접속 중인 유저 조회
 //        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 //        String email = authentication.getName();
