@@ -109,7 +109,17 @@ public class FollowServiceImpl implements FollowService {
             followingMe
         );
     }
-
+    
+    /**
+     * 팔로워 목록 조회
+     *
+     * @param followeeId: 조회할 UserId
+     * @param cursor: 커서 (2025-09-10T09:47:14.318813Z)
+     * @param idAfter: 보조 커서 (0f6a481b-aee8-41ce-8aaf-2cf76434b395)
+     * @param limit: 사이즈
+     * @param nameLike: 이름 검색 필터
+     * @return PageResponse<FollowDto>
+     */
     @Override
     @Transactional(readOnly = true)
     public PageResponse<FollowDto> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
