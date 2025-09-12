@@ -4,13 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.follow.dto.FollowCreateRequest;
 import org.ikuzo.otboo.domain.follow.dto.FollowDto;
+import org.ikuzo.otboo.domain.follow.dto.FollowSummaryDto;
 import org.ikuzo.otboo.domain.follow.service.FollowService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -23,6 +23,13 @@ public class FollowController {
     @PostMapping
     public ResponseEntity<FollowDto> follow(@RequestBody FollowCreateRequest request) {
         FollowDto response = followService.follow(request);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<FollowSummaryDto> summary(@RequestParam UUID userId) {
+        log.info("[FollowController] 팔로우 요약 정보 컨트롤러 진입 userId: {}", userId);
+        FollowSummaryDto response = followService.followSummary(userId);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }
