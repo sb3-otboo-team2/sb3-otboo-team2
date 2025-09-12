@@ -65,17 +65,6 @@ public class FollowCustomRepositoryImpl implements FollowCustomRepository {
             .join(follow.follower, follower)
             .where(follow.following.id.eq(followeeId));
 
-        // 커서 조건
-        if (cursor != null && !cursor.isBlank() && idAfter != null) {
-            Instant cursorInstant = Instant.parse(cursor);
-
-            query.where(
-                follow.createdAt.lt(cursorInstant)
-                    .or(follow.createdAt.eq(cursorInstant)
-                        .and(follow.id.lt(idAfter)))
-            );
-        }
-
         // 이름 검색
         if (nameLike != null && !nameLike.isBlank()) {
             query.where(follower.name.containsIgnoreCase(nameLike));
