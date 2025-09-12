@@ -24,10 +24,12 @@ public class FollowCustomRepositoryImpl implements FollowCustomRepository {
     public List<Follow> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         QFollow follow = QFollow.follow;
         QUser follower = QUser.user;
+        QUser following = new QUser("following");
 
         JPAQuery<Follow> query = jpaQueryFactory
             .selectFrom(follow)
             .join(follow.follower, follower).fetchJoin()
+            .join(follow.following, following).fetchJoin()
             .where(follow.following.id.eq(followeeId));
 
         if (cursor != null && !cursor.isBlank() && idAfter != null) {
