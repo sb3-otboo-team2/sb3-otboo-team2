@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ClothesAttributeDefRepository extends JpaRepository<ClothesAttributeDef, UUID> {
 
+    boolean existsByName(String name);
+
 }

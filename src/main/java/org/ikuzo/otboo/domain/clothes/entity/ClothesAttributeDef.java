@@ -22,9 +22,10 @@ import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ClothesAttributeDef extends BaseUpdatableEntity {
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
 
+    @Builder.Default
     @OneToMany(mappedBy = "definition", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AttributeOption> options = new ArrayList<>();
 }
