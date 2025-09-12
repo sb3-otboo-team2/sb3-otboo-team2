@@ -6,6 +6,7 @@ import lombok.Getter;
 public enum ErrorCode {
     // 의상 속성
     DUPLICATED_ATTRIBUTE_NAME("이미 존재하는 속성 이름입니다"),
+    ATTRIBUTE_NOT_FOUND("존재하지 않는 속성 입니다"),
 
     // 팔로우
     FOLLOW_SELF_NOT_ALLOWED("자기 자신은 팔로우 할 수 없습니다."),

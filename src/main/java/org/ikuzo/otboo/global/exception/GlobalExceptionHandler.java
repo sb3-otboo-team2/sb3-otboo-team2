@@ -58,8 +58,12 @@ public class GlobalExceptionHandler {
 
   private HttpStatus determineHttpStatus(OtbooException exception) {
     return switch (exception.getErrorCode()) {
+
       case FOLLOW_SELF_NOT_ALLOWED, FOLLOW_ALREADY_EXISTS
           ,DUPLICATED_ATTRIBUTE_NAME -> HttpStatus.BAD_REQUEST;
+
+      case ATTRIBUTE_NOT_FOUND -> HttpStatus.NOT_FOUND;
+
       default -> HttpStatus.INTERNAL_SERVER_ERROR;
     };
   }
