@@ -118,9 +118,16 @@ public class FollowServiceImpl implements FollowService {
 
         List<Follow> followList = followers.size() > limit ? followers.subList(0, limit) : followers;
 
-        Instant nextCursor = followList.isEmpty() ? null : followList.get(followList.size() - 1).getCreatedAt();
-        UUID nextIdAfter = followList.isEmpty() ? null : followList.get(followList.size() - 1).getId();
         boolean hasNext = followers.size() > limit;
+
+        Instant nextCursor = null;
+        UUID nextIdAfter = null;
+
+        if (hasNext && !followList.isEmpty()) {
+            Follow last = followList.get(followList.size() - 1);
+            nextCursor = last.getCreatedAt();
+            nextIdAfter = last.getId();
+        }
         String sortBy = "createdAt";
         String sortDirection = "DESCENDING";
         long totalCount = followRepository.countByCursorFilter(followeeId, cursor, idAfter, limit, nameLike);
