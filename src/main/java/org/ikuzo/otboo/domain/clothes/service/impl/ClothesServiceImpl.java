@@ -103,6 +103,25 @@ public class ClothesServiceImpl implements ClothesService {
         return clothesMapper.toDto(savedClothes);
     }
 
+    @Transactional
+    @Override
+    public void delete(UUID clothesId) {
+
+        log.info("[Service] 의상 삭제 시작 - clothesId: {}", clothesId);
+
+        Clothes clothes = clothesRepository.findById(clothesId)
+                .orElseThrow(() -> new ClothesNotFoundException(clothesId));
+
+        String oldImageUrl = clothes.getImageUrl();
+
+        clothesRepository.delete(clothes);
+
+        imageSwapHelper.deleteAfterCommit(oldImageUrl, "의상 삭제");
+
+        log.info("[Service] 의상 삭제 완료 - clothesId: {}", clothesId);
+
+    }
+
     private void validateClothesCreateRequest (ClothesCreateRequest request) {
         if (request.ownerId() == null) {
             throw new MissingRequiredFieldException("ownerId is null");

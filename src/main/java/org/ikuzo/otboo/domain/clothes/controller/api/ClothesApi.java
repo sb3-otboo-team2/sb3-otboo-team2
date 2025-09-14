@@ -66,4 +66,25 @@ public interface ClothesApi {
         MultipartFile image
     );
 
+    @Operation(summary = "의상 삭제")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "204",
+            description = "의상 삭제 성공",
+            content = @Content(
+                mediaType = "*/*",
+                schema = @Schema(implementation = ClothesDto.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "의상 삭제 실패",
+            content = @Content(
+                mediaType = "*/*",
+                schema = @Schema(implementation = ErrorResponse.class)
+            )
+        )
+    })
+    ResponseEntity<Void> delete(UUID clothesId);
+
 }

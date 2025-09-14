@@ -4,9 +4,9 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Component
@@ -59,6 +59,25 @@ public class ImageSwapHelper {
                 }
             }
         );
+    }
+
+    public void deleteAfterCommit(String imageUrl, String context) {
+
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return;
+        }
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            cleanupImageQuietly(imageUrl, "(활성 트랜잭션이 없어 즉시 삭제)" + context);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                cleanupImageQuietly(imageUrl, context);
+            }
+        });
     }
 
     private void cleanupImageQuietly(String imageUrl, String context) {
