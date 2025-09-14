@@ -22,7 +22,7 @@ import org.ikuzo.otboo.domain.clothes.repository.ClothesRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothesService;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
-import org.ikuzo.otboo.global.util.S3ImageStorage;
+import org.ikuzo.otboo.global.util.ImageSwapHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,10 +33,10 @@ import org.springframework.web.multipart.MultipartFile;
 public class ClothesServiceImpl implements ClothesService {
 
     private final UserRepository userRepository;
-    private final S3ImageStorage s3ImageStorage;
     private final ClothesRepository clothesRepository;
     private final ClothesAttributeDefRepository clothesAttributeDefRepository;
     private final ClothesMapper clothesMapper;
+    private final ImageSwapHelper imageSwapHelper;
 
     @Transactional
     @Override
@@ -49,29 +49,26 @@ public class ClothesServiceImpl implements ClothesService {
             .orElseThrow(() -> new RuntimeException("존재하지 않는 사용자입니다"));
 
         String imageUrl = null;
-        try {
-            imageUrl = uploadImageIfPresent(image, owner.getId());
-
-            Clothes clothes = Clothes.builder()
-                .name(request.name())
-                .type(request.type())
-                .owner(owner)
-                .imageUrl(imageUrl)
-                .build();
-
-            attachAttributes(clothes, request.attributes());
-
-            Clothes saved = clothesRepository.save(clothes);
-
-            log.info("[Service] 의상 등록 완료 - ownerId: {}, name: {}",
-                saved.getOwner().getId(), saved.getName());
-
-            return clothesMapper.toDto(saved);
-
-        } catch (RuntimeException e) {
-            cleanupUploadedImageQuietly(imageUrl);
-            throw e;
+        if (image != null && !image.isEmpty()) {
+            imageUrl = imageSwapHelper.swapImageSafely(image, null, owner.getId());
         }
+
+        Clothes clothes = Clothes.builder()
+            .name(request.name())
+            .type(request.type())
+            .owner(owner)
+            .imageUrl(imageUrl)
+            .build();
+
+        attachAttributes(clothes, request.attributes());
+
+        Clothes saved = clothesRepository.save(clothes);
+
+        log.info("[Service] 의상 등록 완료 - ownerId: {}, name: {}",
+            saved.getOwner().getId(), saved.getName());
+
+        return clothesMapper.toDto(saved);
+
     }
 
     @Transactional
@@ -87,12 +84,11 @@ public class ClothesServiceImpl implements ClothesService {
 
         clothes.updateNameAndType(request.name(), request.type());
 
-        String oldImageUrl = clothes.getImageUrl();
-        String newImageUrl = uploadImageIfPresent(image, clothes.getOwner().getId());
+        String newImageUrl = imageSwapHelper.swapImageSafely(
+            image, clothes.getImageUrl(), clothes.getOwner().getId());
 
         if (newImageUrl != null) {
             clothes.updateImageUrl(newImageUrl);
-            cleanupUploadedImageQuietly(oldImageUrl);
         }
 
         if (request.attributes() != null) {
@@ -128,27 +124,6 @@ public class ClothesServiceImpl implements ClothesService {
         }
         if (request.type() == null) {
             throw new MissingRequiredFieldException("type is null");
-        }
-    }
-
-
-    private String uploadImageIfPresent(MultipartFile image, UUID ownerId) {
-        if (image == null || image.isEmpty()) {
-            return null;
-        }
-        validateImage(image);
-        String folder = "clothes/" + ownerId + "/";
-        return s3ImageStorage.uploadImage(image, folder);
-    }
-
-    private void validateImage(MultipartFile image) {
-        long maxBytes = 10L * 1024 * 1024;
-        if (image.getSize() > maxBytes) {
-            throw new IllegalArgumentException("이미지 크기 제한 초과(최대 10MB)");
-        }
-        String contentType = image.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("이미지 파일만 업로드 가능합니다.");
         }
     }
 
@@ -195,17 +170,6 @@ public class ClothesServiceImpl implements ClothesService {
         List<AttributeOption> options = def.getOptions();
         return options == null ? List.of()
             : options.stream().map(AttributeOption::getValue).toList();
-    }
-
-    private void cleanupUploadedImageQuietly(String imageUrl) {
-        if (imageUrl == null) {
-            return;
-        }
-        try {
-            s3ImageStorage.deleteImage(imageUrl);
-        } catch (Exception ex) {
-            log.error("DB 롤백 중 업로드 이미지 정리 실패: {}", imageUrl, ex);
-        }
     }
 
     private void replaceAttribute(Clothes clothes, List<ClothesAttributeDto> dtos) {
