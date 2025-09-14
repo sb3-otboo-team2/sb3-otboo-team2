@@ -158,6 +158,18 @@ public class ClothesServiceImpl implements ClothesService {
         }
     }
 
+    private void replaceAttribute(Clothes clothes, List<ClothesAttributeDto> dtos) {
+
+        clothes.getAttributes().clear();
+
+        for (ClothesAttributeDto dto : dtos) {
+            if (dto == null) {
+                continue;
+            }
+            clothes.getAttributes().add(toClothesAttribute(clothes, dto));
+        }
+    }
+
     private ClothesAttribute toClothesAttribute(Clothes clothes, ClothesAttributeDto dto) {
         UUID defId = dto.definitionId();
         String value = dto.value() == null ? null : dto.value().trim();
@@ -189,17 +201,5 @@ public class ClothesServiceImpl implements ClothesService {
         List<AttributeOption> options = def.getOptions();
         return options == null ? List.of()
             : options.stream().map(AttributeOption::getValue).toList();
-    }
-
-    private void replaceAttribute(Clothes clothes, List<ClothesAttributeDto> dtos) {
-
-        clothes.getAttributes().clear();
-
-        for (ClothesAttributeDto dto : dtos) {
-            if (dto == null) {
-                continue;
-            }
-            clothes.getAttributes().add(toClothesAttribute(clothes, dto));
-        }
     }
 }
