@@ -71,13 +71,10 @@ public interface ClothesApi {
         @ApiResponse(
             responseCode = "204",
             description = "의상 삭제 성공",
-            content = @Content(
-                mediaType = "*/*",
-                schema = @Schema(implementation = ClothesDto.class)
-            )
+            content = @Content()
         ),
         @ApiResponse(
-            responseCode = "400",
+            responseCode = "404",
             description = "의상 삭제 실패",
             content = @Content(
                 mediaType = "*/*",

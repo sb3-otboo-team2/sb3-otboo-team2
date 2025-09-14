@@ -72,7 +72,7 @@ public class ClothesController implements ClothesApi {
     @DeleteMapping("/{clothesId}")
     @Override
     public ResponseEntity<Void> delete(
-        @PathVariable UUID clothesId
+        @PathVariable("clothesId") UUID clothesId
     ) {
         log.info("[Controller] 의상 삭제 요청 - clothesId: {}", clothesId);
 
