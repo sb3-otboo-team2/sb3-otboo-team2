@@ -50,7 +50,7 @@ public class ClothesServiceImpl implements ClothesService {
 
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
-            imageUrl = imageSwapHelper.swapImageSafely(image, null, owner.getId());
+            imageUrl = imageSwapHelper.swapImageSafely("clothes", image, null, owner.getId());
         }
 
         Clothes clothes = Clothes.builder()
@@ -85,7 +85,7 @@ public class ClothesServiceImpl implements ClothesService {
         clothes.updateNameAndType(request.name(), request.type());
 
         String newImageUrl = imageSwapHelper.swapImageSafely(
-            image, clothes.getImageUrl(), clothes.getOwner().getId());
+            "clothes", image, clothes.getImageUrl(), clothes.getOwner().getId());
 
         if (newImageUrl != null) {
             clothes.updateImageUrl(newImageUrl);
@@ -103,7 +103,26 @@ public class ClothesServiceImpl implements ClothesService {
         return clothesMapper.toDto(savedClothes);
     }
 
-    private void validateClothesCreateRequest (ClothesCreateRequest request) {
+    @Transactional
+    @Override
+    public void delete(UUID clothesId) {
+
+        log.info("[Service] 의상 삭제 시작 - clothesId: {}", clothesId);
+
+        Clothes clothes = clothesRepository.findById(clothesId)
+            .orElseThrow(() -> new ClothesNotFoundException(clothesId));
+
+        String oldImageUrl = clothes.getImageUrl();
+
+        clothesRepository.delete(clothes);
+
+        imageSwapHelper.deleteAfterCommit(oldImageUrl, "의상 삭제");
+
+        log.info("[Service] 의상 삭제 완료 - clothesId: {}", clothesId);
+
+    }
+
+    private void validateClothesCreateRequest(ClothesCreateRequest request) {
         if (request.ownerId() == null) {
             throw new MissingRequiredFieldException("ownerId is null");
         }
@@ -131,6 +150,18 @@ public class ClothesServiceImpl implements ClothesService {
         if (dtos == null) {
             return;
         }
+        for (ClothesAttributeDto dto : dtos) {
+            if (dto == null) {
+                continue;
+            }
+            clothes.getAttributes().add(toClothesAttribute(clothes, dto));
+        }
+    }
+
+    private void replaceAttribute(Clothes clothes, List<ClothesAttributeDto> dtos) {
+
+        clothes.getAttributes().clear();
+
         for (ClothesAttributeDto dto : dtos) {
             if (dto == null) {
                 continue;
@@ -170,17 +201,5 @@ public class ClothesServiceImpl implements ClothesService {
         List<AttributeOption> options = def.getOptions();
         return options == null ? List.of()
             : options.stream().map(AttributeOption::getValue).toList();
-    }
-
-    private void replaceAttribute(Clothes clothes, List<ClothesAttributeDto> dtos) {
-
-        clothes.getAttributes().clear();
-
-        for (ClothesAttributeDto dto : dtos) {
-            if (dto == null) {
-                continue;
-            }
-            clothes.getAttributes().add(toClothesAttribute(clothes, dto));
-        }
     }
 }
