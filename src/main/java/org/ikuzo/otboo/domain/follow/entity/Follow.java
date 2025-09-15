@@ -14,7 +14,7 @@ import org.ikuzo.otboo.global.base.BaseEntity;
 public class Follow extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "follower_id")
+    @JoinColumn(name = "follower_id", nullable = false)
     private User follower;
 
     @ManyToOne(fetch = FetchType.LAZY)

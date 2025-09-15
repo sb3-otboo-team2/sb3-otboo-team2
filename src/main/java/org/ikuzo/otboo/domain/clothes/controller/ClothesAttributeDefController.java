@@ -3,7 +3,7 @@ package org.ikuzo.otboo.domain.clothes.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ikuzo.otboo.domain.clothes.controller.api.ClothesApi;
+import org.ikuzo.otboo.domain.clothes.controller.api.ClothesAttributeDefApi;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesAttributeDefDto;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesAttributeDefCreateRequest;
 import org.ikuzo.otboo.domain.clothes.service.ClothesAttributeDefService;
@@ -18,11 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/clothes/attribute-defs")
-public class ClothesAttributeDefController implements ClothesApi {
+public class ClothesAttributeDefController implements ClothesAttributeDefApi {
 
     private final ClothesAttributeDefService clothesAttributeDefService;
 
-    //    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     @Override
     public ResponseEntity<ClothesAttributeDefDto> create(
