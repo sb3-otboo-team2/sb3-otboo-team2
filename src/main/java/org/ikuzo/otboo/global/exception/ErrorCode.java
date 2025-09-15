@@ -4,6 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum ErrorCode {
+    // 사용자
+    DUPLICATE_USER("이미 존재하는 사용자입니다."),
+
     // 의상 속성
     DUPLICATED_ATTRIBUTE_NAME("이미 존재하는 속성 이름입니다"),
 
