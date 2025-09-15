@@ -124,7 +124,7 @@ public class FollowServiceImpl implements FollowService {
     @Transactional(readOnly = true)
     public PageResponse<FollowDto> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         log.info("[FollowService] 팔로워 목록 조회 서비스 진입");
-        List<Follow> followers = followRepository.getFollowers(followeeId, cursor, idAfter, limit, nameLike);
+        List<Follow> followers = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "follower");
 
         List<Follow> followList = followers.size() > limit ? followers.subList(0, limit) : followers;
 
@@ -140,7 +140,7 @@ public class FollowServiceImpl implements FollowService {
         }
         String sortBy = "createdAt";
         String sortDirection = "DESCENDING";
-        long totalCount = followRepository.countByCursorFilter(followeeId, cursor, idAfter, limit, nameLike);
+        long totalCount = followRepository.countByCursorFilter(followeeId, nameLike, "follower");
 
         List<FollowDto> content = followList.stream()
             .map(follow -> {
@@ -174,7 +174,7 @@ public class FollowServiceImpl implements FollowService {
     @Override
     public PageResponse<FollowDto> getFollowings(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         log.info("[FollowService] 팔로잉 목록 조회 서비스 진입");
-        List<Follow> followings = followRepository.getFollowings(followeeId, cursor, idAfter, limit, nameLike);
+        List<Follow> followings = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "following");
 
         List<Follow> followList = followings.size() > limit ? followings.subList(0, limit) : followings;
         boolean hasNext = followings.size() > limit;
@@ -187,6 +187,7 @@ public class FollowServiceImpl implements FollowService {
         }
         String sortBy = "createdAt";
         String sortDirection = "DESCENDING";
+        long totalCount = followRepository.countByCursorFilter(followeeId, nameLike, "following");
 
         List<FollowDto> content = followList.stream()
             .map(follow -> {
@@ -201,7 +202,7 @@ public class FollowServiceImpl implements FollowService {
             nextCursor,
             nextIdAfter,
             hasNext,
-            3L,
+            totalCount,
             sortBy,
             sortDirection
         );

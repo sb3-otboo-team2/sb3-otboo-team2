@@ -8,9 +8,8 @@ import java.util.UUID;
 
 public interface FollowCustomRepository {
 
-    List<Follow> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike);
+    List<Follow> getFollows(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike, String type);
 
-    long countByCursorFilter(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike);
+    long countByCursorFilter(UUID followeeId, String nameLike, String type);
 
-    List<Follow> getFollowings(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike);
 }

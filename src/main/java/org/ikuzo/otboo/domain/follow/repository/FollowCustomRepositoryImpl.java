@@ -21,69 +21,30 @@ public class FollowCustomRepositoryImpl implements FollowCustomRepository {
     private final JPAQueryFactory jpaQueryFactory;
 
     @Override
-    public List<Follow> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
-        QFollow follow = QFollow.follow;
-        QUser follower = QUser.user;
-        QUser following = new QUser("following");
-
-        JPAQuery<Follow> query = jpaQueryFactory
-            .selectFrom(follow)
-            .join(follow.follower, follower).fetchJoin()
-            .join(follow.following, following).fetchJoin()
-            .where(follow.following.id.eq(followeeId));
-
-        if (cursor != null && !cursor.isBlank() && idAfter != null) {
-            Instant cursorInstant = Instant.parse(cursor);
-
-            query.where(
-                follow.createdAt.lt(cursorInstant)
-                    .or(follow.createdAt.eq(cursorInstant)
-                        .and(follow.id.lt(idAfter)))
-            );
-        }
-
-        // 이름 검색
-        if (nameLike != null && !nameLike.isBlank()) {
-            query.where(follower.name.containsIgnoreCase(nameLike));
-        }
-
-        // 정렬 + limit
-        return query
-            .orderBy(follow.createdAt.desc())
-            .limit(limit + 1)
-            .fetch();
-    }
-
-    @Override
-    public long countByCursorFilter(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
-        QFollow follow = QFollow.follow;
-        QUser follower = QUser.user;
-
-        JPAQuery<Long> query = jpaQueryFactory
-            .select(follow.count())
-            .from(follow)
-            .join(follow.follower, follower)
-            .where(follow.following.id.eq(followeeId));
-
-        // 이름 검색
-        if (nameLike != null && !nameLike.isBlank()) {
-            query.where(follower.name.containsIgnoreCase(nameLike));
-        }
-
-        return query.fetchFirst();
-    }
-
-    @Override
-    public List<Follow> getFollowings(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
+    public List<Follow> getFollows(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike, String type) {
         QFollow follow = QFollow.follow;
         QUser follower = new QUser("follower");
         QUser following = new QUser("following");
 
-        JPAQuery<Follow> query = jpaQueryFactory
-            .selectFrom(follow)
-            .join(follow.follower, follower).fetchJoin()
-            .join(follow.following, following).fetchJoin()
-            .where(follow.follower.id.eq(followeeId));
+        JPAQuery<Follow> query = jpaQueryFactory.selectFrom(follow);
+
+        if (type.equals("follower")) {
+            query.join(follow.follower, follower).fetchJoin()
+                .join(follow.following, following).fetchJoin()
+                .where(follow.following.id.eq(followeeId));
+
+            if (nameLike != null && !nameLike.isBlank()) {
+                query.where(follower.name.containsIgnoreCase(nameLike));
+            }
+        } else if (type.equals("following")) {
+            query.join(follow.follower, follower).fetchJoin()
+                .join(follow.following, following).fetchJoin()
+                .where(follow.follower.id.eq(followeeId));
+
+            if (nameLike != null && !nameLike.isBlank()) {
+                query.where(following.name.containsIgnoreCase(nameLike));
+            }
+        }
 
         if (cursor != null && !cursor.isBlank() && idAfter != null) {
             Instant cursorInstant = Instant.parse(cursor);
@@ -95,14 +56,37 @@ public class FollowCustomRepositoryImpl implements FollowCustomRepository {
             );
         }
 
-        // 이름 검색
-        if (nameLike != null && !nameLike.isBlank()) {
-            query.where(following.name.containsIgnoreCase(nameLike));
-        }
-
         return query
             .orderBy(follow.createdAt.desc())
             .limit(limit + 1)
             .fetch();
+    }
+
+    @Override
+    public long countByCursorFilter(UUID followeeId, String nameLike, String type) {
+        QFollow follow = QFollow.follow;
+        QUser follower = new QUser("follower");
+        QUser following = new QUser("following");
+
+        JPAQuery<Long> query = jpaQueryFactory.select(follow.count()).from(follow);
+
+        if (type.equals("follower")) {
+            query.join(follow.follower, follower)
+                .where(follow.following.id.eq(followeeId));
+
+            if (nameLike != null && !nameLike.isBlank()) {
+                query.where(follower.name.containsIgnoreCase(nameLike));
+            }
+        } else if (type.equals("following")) {
+            query.join(follow.following, following)
+                .where(follow.follower.id.eq(followeeId));
+
+            if (nameLike != null && !nameLike.isBlank()) {
+                query.where(following.name.containsIgnoreCase(nameLike));
+            }
+        }
+
+
+        return query.fetchFirst();
     }
 }
