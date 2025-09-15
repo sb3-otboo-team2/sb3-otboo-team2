@@ -13,8 +13,8 @@ import org.ikuzo.otboo.domain.user.dto.UserSummary;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
-import org.ikuzo.otboo.global.exception.follow.FollowAlreadyException;
-import org.ikuzo.otboo.global.exception.follow.FollowSelfNotAllowException;
+import org.ikuzo.otboo.domain.follow.exception.FollowAlreadyException;
+import org.ikuzo.otboo.domain.follow.exception.FollowSelfNotAllowException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
