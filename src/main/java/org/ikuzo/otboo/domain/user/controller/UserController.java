@@ -25,11 +25,11 @@ public class UserController {
     public ResponseEntity<UserDto> create(
         @RequestBody @Valid UserCreateRequest userCreateRequest
     ) {
-        log.info("사용자 생성 요청: {}", userCreateRequest);
+        log.info("사용자 생성 요청 수신");
 
         UserDto createdUser = userService.create(userCreateRequest);
 
-        log.debug("사용자 생성 응답: {}", createdUser);
+        log.debug("사용자 생성 응답: {}", createdUser.id());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }

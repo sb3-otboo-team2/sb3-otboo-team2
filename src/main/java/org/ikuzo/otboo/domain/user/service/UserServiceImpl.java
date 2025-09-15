@@ -24,7 +24,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public UserDto create(UserCreateRequest userCreateRequest) {
-        log.debug("사용자 생성 시작: {}", userCreateRequest);
+        log.debug("사용자 생성 시작");
 
         // 중복 이메일 확인
         String email = userCreateRequest.email();
