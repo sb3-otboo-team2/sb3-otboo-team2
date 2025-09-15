@@ -48,15 +48,22 @@ public class User extends BaseUpdatableEntity {
     private String locationNames;
 
     @Column(nullable = false)
-    private Integer temperatureSensitivity;
+    private Integer temperatureSensitivity = 3;
 
     @Column(columnDefinition = "TEXT")
     private String profileImageUrl;
 
     @Column(nullable = false)
-    private Boolean locked;
+    private Boolean locked = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;
+    private Role role = Role.USER;
+
+    public User(String email, String name, String password) {
+        this.email = email;
+        this.name = name;
+        this.password = password;
+    }
+
 }
