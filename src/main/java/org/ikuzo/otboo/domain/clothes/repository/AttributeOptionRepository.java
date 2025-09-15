@@ -7,5 +7,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AttributeOptionRepository extends JpaRepository<AttributeOption, UUID> {
-
 }
