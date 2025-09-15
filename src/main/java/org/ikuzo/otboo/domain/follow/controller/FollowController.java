@@ -59,4 +59,10 @@ public class FollowController {
         PageResponse<FollowDto> response = followService.getFollowings(followeeId, cursor, idAfter, limit, nameLike);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
+
+    @DeleteMapping("/{followId}")
+    public ResponseEntity<Void> cancelFollow(@PathVariable UUID followId) {
+        log.info("[FollowController] 팔로우 취소 컨트롤러 진입 followId: {}", followId);
+        followService.cancel(followId);
+    }
 }
