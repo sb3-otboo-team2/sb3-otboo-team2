@@ -11,4 +11,5 @@ public interface FollowService {
     FollowDto follow(FollowCreateRequest request);
     FollowSummaryDto followSummary(UUID userId);
     PageResponse<FollowDto> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike);
+    PageResponse<FollowDto> getFollowings(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike);
 }

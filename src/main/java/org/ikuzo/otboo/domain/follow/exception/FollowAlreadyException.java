@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.global.exception.follow;
+package org.ikuzo.otboo.domain.follow.exception;
 
 import org.ikuzo.otboo.global.exception.ErrorCode;
 

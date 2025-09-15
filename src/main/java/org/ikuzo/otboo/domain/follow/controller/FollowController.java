@@ -46,4 +46,17 @@ public class FollowController {
         PageResponse<FollowDto> response = followService.getFollowers(followeeId, cursor, idAfter, limit, nameLike);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
+
+    @GetMapping("/followings")
+    public ResponseEntity<PageResponse<FollowDto>> followings(
+        @RequestParam UUID followeeId,
+        @RequestParam(required = false) String cursor,
+        @RequestParam(required = false) UUID idAfter,
+        @RequestParam int limit,
+        @RequestParam(required = false) String nameLike
+    ) {
+        log.info("[FollowController] 팔로잉 목록 조회 컨트롤러 진입 followeeId: {}, cursor: {}, idAfter: {}, limit: {}, nameLike: {}", followeeId, cursor, idAfter,  limit, nameLike);
+        PageResponse<FollowDto> response = followService.getFollowings(followeeId, cursor, idAfter, limit, nameLike);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
 }

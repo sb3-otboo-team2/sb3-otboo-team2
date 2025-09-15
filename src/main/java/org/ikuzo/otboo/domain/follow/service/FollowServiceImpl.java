@@ -13,8 +13,8 @@ import org.ikuzo.otboo.domain.user.dto.UserSummary;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
-import org.ikuzo.otboo.global.exception.follow.FollowAlreadyException;
-import org.ikuzo.otboo.global.exception.follow.FollowSelfNotAllowException;
+import org.ikuzo.otboo.domain.follow.exception.FollowAlreadyException;
+import org.ikuzo.otboo.domain.follow.exception.FollowSelfNotAllowException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,7 +69,7 @@ public class FollowServiceImpl implements FollowService {
         UserSummary followerSummary = new UserSummary(follower.getId(), follower.getName(), follower.getProfileImageUrl());
         UserSummary followeeSummary = new UserSummary(followee.getId(), followee.getName(), followee.getProfileImageUrl());
 
-        return followMapper.toDto(savedFollow, followerSummary, followeeSummary);
+        return followMapper.toDto(savedFollow, followeeSummary, followerSummary);
     }
 
     /**
@@ -124,7 +124,7 @@ public class FollowServiceImpl implements FollowService {
     @Transactional(readOnly = true)
     public PageResponse<FollowDto> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         log.info("[FollowService] 팔로워 목록 조회 서비스 진입");
-        List<Follow> followers = followRepository.getFollowers(followeeId, cursor, idAfter, limit, nameLike);
+        List<Follow> followers = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "follower");
 
         List<Follow> followList = followers.size() > limit ? followers.subList(0, limit) : followers;
 
@@ -140,13 +140,60 @@ public class FollowServiceImpl implements FollowService {
         }
         String sortBy = "createdAt";
         String sortDirection = "DESCENDING";
-        long totalCount = followRepository.countByCursorFilter(followeeId, cursor, idAfter, limit, nameLike);
+        long totalCount = followRepository.countByCursorFilter(followeeId, nameLike, "follower");
 
         List<FollowDto> content = followList.stream()
             .map(follow -> {
                 UserSummary follower = new UserSummary(follow.getFollower().getId(), follow.getFollower().getName(), follow.getFollower().getProfileImageUrl());
                 UserSummary followee = new UserSummary(follow.getFollowing().getId(), follow.getFollowing().getName(), follow.getFollowing().getProfileImageUrl());
-                return followMapper.toDto(follow, follower, followee);
+                return followMapper.toDto(follow, followee, follower);
+            })
+            .toList();
+
+        return new PageResponse<>(
+            content,
+            nextCursor,
+            nextIdAfter,
+            hasNext,
+            totalCount,
+            sortBy,
+            sortDirection
+        );
+    }
+
+    /**
+     * 팔로잉 목록 조회
+     *
+     * @param followeeId: 조회할 UserId
+     * @param cursor: 커서 (2025-09-10T09:47:14.318813Z)
+     * @param idAfter: 보조 커서 (0f6a481b-aee8-41ce-8aaf-2cf76434b395)
+     * @param limit: 사이즈
+     * @param nameLike: 이름 검색 필터
+     * @return PageResponse<FollowDto>
+     */
+    @Override
+    public PageResponse<FollowDto> getFollowings(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
+        log.info("[FollowService] 팔로잉 목록 조회 서비스 진입");
+        List<Follow> followings = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "following");
+
+        List<Follow> followList = followings.size() > limit ? followings.subList(0, limit) : followings;
+        boolean hasNext = followings.size() > limit;
+        Instant nextCursor = null;
+        UUID nextIdAfter = null;
+        if (hasNext && !followList.isEmpty()) {
+            Follow last = followList.get(followList.size() - 1);
+            nextCursor = last.getCreatedAt();
+            nextIdAfter = last.getId();
+        }
+        String sortBy = "createdAt";
+        String sortDirection = "DESCENDING";
+        long totalCount = followRepository.countByCursorFilter(followeeId, nameLike, "following");
+
+        List<FollowDto> content = followList.stream()
+            .map(follow -> {
+                UserSummary follower = new UserSummary(follow.getFollower().getId(), follow.getFollower().getName(), follow.getFollower().getProfileImageUrl());
+                UserSummary followee = new UserSummary(follow.getFollowing().getId(), follow.getFollowing().getName(), follow.getFollowing().getProfileImageUrl());
+                return followMapper.toDto(follow, followee, follower);
             })
             .toList();
 

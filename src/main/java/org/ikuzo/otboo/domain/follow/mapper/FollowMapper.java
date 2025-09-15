@@ -3,10 +3,16 @@ package org.ikuzo.otboo.domain.follow.mapper;
 import org.ikuzo.otboo.domain.follow.dto.FollowDto;
 import org.ikuzo.otboo.domain.follow.entity.Follow;
 import org.ikuzo.otboo.domain.user.dto.UserSummary;
-import org.mapstruct.Mapper;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface FollowMapper {
+@Component
+public class FollowMapper {
 
-    FollowDto toDto(Follow follow, UserSummary follower, UserSummary followee);
+    public FollowDto toDto(Follow follow, UserSummary followee, UserSummary follower) {
+        return new FollowDto(
+            follow.getId(),
+            followee,
+            follower
+        );
+    }
 }
