@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface FollowRepository extends JpaRepository<Follow, UUID> {
+public interface FollowRepository extends JpaRepository<Follow, UUID>, FollowCustomRepository {
 
     boolean existsByFollower_IdAndFollowing_Id(UUID followerId, UUID followingId);
     long countByFollowing_Id(UUID userId);

@@ -12,11 +12,14 @@ import org.ikuzo.otboo.domain.follow.repository.FollowRepository;
 import org.ikuzo.otboo.domain.user.dto.UserSummary;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.exception.follow.FollowAlreadyException;
 import org.ikuzo.otboo.global.exception.follow.FollowSelfNotAllowException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -76,6 +79,7 @@ public class FollowServiceImpl implements FollowService {
      * @return FollowSummaryDto
      */
     @Override
+    @Transactional(readOnly = true)
     public FollowSummaryDto followSummary(UUID userId) {
         log.info("[FollowService] followSummary 팔로우 요약 정보 userId: {}", userId);
         // TODO: SpringSecurity 개발 후 securityContextHolder를 통해 접속 중인 유저 조회
@@ -103,6 +107,57 @@ public class FollowServiceImpl implements FollowService {
             followedByMe,
             followedByMeId,
             followingMe
+        );
+    }
+    
+    /**
+     * 팔로워 목록 조회
+     *
+     * @param followeeId: 조회할 UserId
+     * @param cursor: 커서 (2025-09-10T09:47:14.318813Z)
+     * @param idAfter: 보조 커서 (0f6a481b-aee8-41ce-8aaf-2cf76434b395)
+     * @param limit: 사이즈
+     * @param nameLike: 이름 검색 필터
+     * @return PageResponse<FollowDto>
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<FollowDto> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
+        log.info("[FollowService] 팔로워 목록 조회 서비스 진입");
+        List<Follow> followers = followRepository.getFollowers(followeeId, cursor, idAfter, limit, nameLike);
+
+        List<Follow> followList = followers.size() > limit ? followers.subList(0, limit) : followers;
+
+        boolean hasNext = followers.size() > limit;
+
+        Instant nextCursor = null;
+        UUID nextIdAfter = null;
+
+        if (hasNext && !followList.isEmpty()) {
+            Follow last = followList.get(followList.size() - 1);
+            nextCursor = last.getCreatedAt();
+            nextIdAfter = last.getId();
+        }
+        String sortBy = "createdAt";
+        String sortDirection = "DESCENDING";
+        long totalCount = followRepository.countByCursorFilter(followeeId, cursor, idAfter, limit, nameLike);
+
+        List<FollowDto> content = followList.stream()
+            .map(follow -> {
+                UserSummary follower = new UserSummary(follow.getFollower().getId(), follow.getFollower().getName(), follow.getFollower().getProfileImageUrl());
+                UserSummary followee = new UserSummary(follow.getFollowing().getId(), follow.getFollowing().getName(), follow.getFollowing().getProfileImageUrl());
+                return followMapper.toDto(follow, follower, followee);
+            })
+            .toList();
+
+        return new PageResponse<>(
+            content,
+            nextCursor,
+            nextIdAfter,
+            hasNext,
+            totalCount,
+            sortBy,
+            sortDirection
         );
     }
 }
