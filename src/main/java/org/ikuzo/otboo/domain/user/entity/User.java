@@ -33,16 +33,16 @@ public class User extends BaseUpdatableEntity {
     private Instant birthDate;
 
     @Column
-    private double latitude;
+    private Double latitude;
 
     @Column
-    private double longitude;
+    private Double longitude;
 
     @Column
-    private int x;
+    private Integer x;
 
     @Column
-    private int y;
+    private Integer y;
 
     @Column(length = 255)
     private String locationNames;
