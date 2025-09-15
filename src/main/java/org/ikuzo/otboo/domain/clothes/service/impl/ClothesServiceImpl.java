@@ -50,7 +50,7 @@ public class ClothesServiceImpl implements ClothesService {
 
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
-            imageUrl = imageSwapHelper.swapImageSafely(image, null, owner.getId());
+            imageUrl = imageSwapHelper.swapImageSafely("clothes", image, null, owner.getId());
         }
 
         Clothes clothes = Clothes.builder()
@@ -85,7 +85,7 @@ public class ClothesServiceImpl implements ClothesService {
         clothes.updateNameAndType(request.name(), request.type());
 
         String newImageUrl = imageSwapHelper.swapImageSafely(
-            image, clothes.getImageUrl(), clothes.getOwner().getId());
+            "clothes", image, clothes.getImageUrl(), clothes.getOwner().getId());
 
         if (newImageUrl != null) {
             clothes.updateImageUrl(newImageUrl);
@@ -110,7 +110,7 @@ public class ClothesServiceImpl implements ClothesService {
         log.info("[Service] 의상 삭제 시작 - clothesId: {}", clothesId);
 
         Clothes clothes = clothesRepository.findById(clothesId)
-                .orElseThrow(() -> new ClothesNotFoundException(clothesId));
+            .orElseThrow(() -> new ClothesNotFoundException(clothesId));
 
         String oldImageUrl = clothes.getImageUrl();
 
@@ -122,7 +122,7 @@ public class ClothesServiceImpl implements ClothesService {
 
     }
 
-    private void validateClothesCreateRequest (ClothesCreateRequest request) {
+    private void validateClothesCreateRequest(ClothesCreateRequest request) {
         if (request.ownerId() == null) {
             throw new MissingRequiredFieldException("ownerId is null");
         }

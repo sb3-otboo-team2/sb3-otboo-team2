@@ -78,7 +78,7 @@ public class ClothesController implements ClothesApi {
 
         clothesService.delete(clothesId);
 
-        log.info("[Controller] 의상 삭제 완료 (커밋 후 이미지 정리 예정) - clothesId: {}", clothesId);
+        log.info("[Controller] 의상 삭제 완료 - clothesId: {}", clothesId);
 
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }

@@ -22,12 +22,12 @@ public class ImageSwapHelper {
      * - 트랜잭션 커밋 성공 시: 기존 이미지 삭제
      * - 트랜잭션 롤백 시: 새 이미지 삭제
      */
-    public String swapImageSafely(MultipartFile newImage, String oldImageUrl, UUID ownerId) {
+    public String swapImageSafely(String folderName, MultipartFile newImage, String oldImageUrl, UUID ownerId) {
         if (newImage == null || newImage.isEmpty()) {
             return null;
         }
 
-        String folder = "clothes/" + ownerId + "/";
+        String folder = folderName + "/" + ownerId + "/";
         String newImageUrl = s3ImageStorage.uploadImage(newImage, folder);
 
         registerCleanupCallbacks(newImageUrl, oldImageUrl);
