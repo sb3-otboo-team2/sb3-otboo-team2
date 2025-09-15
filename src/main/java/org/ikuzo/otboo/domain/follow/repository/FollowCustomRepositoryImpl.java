@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.follow.repository;
 
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,9 @@ public class FollowCustomRepositoryImpl implements FollowCustomRepository {
                 .where(follow.following.id.eq(followeeId));
 
             if (nameLike != null && !nameLike.isBlank()) {
-                query.where(follower.name.containsIgnoreCase(nameLike));
+                query.where(
+                    Expressions.booleanTemplate("{0} ILIKE {1}", follower.name, "%" + nameLike.trim() + "%")
+                );
             }
         } else if (type.equals("following")) {
             query.join(follow.follower, follower).fetchJoin()
@@ -42,7 +45,9 @@ public class FollowCustomRepositoryImpl implements FollowCustomRepository {
                 .where(follow.follower.id.eq(followeeId));
 
             if (nameLike != null && !nameLike.isBlank()) {
-                query.where(following.name.containsIgnoreCase(nameLike));
+                query.where(
+                    Expressions.booleanTemplate("{0} ILIKE {1}", following.name, "%" + nameLike.trim() + "%")
+                );
             }
         }
 
@@ -75,14 +80,18 @@ public class FollowCustomRepositoryImpl implements FollowCustomRepository {
                 .where(follow.following.id.eq(followeeId));
 
             if (nameLike != null && !nameLike.isBlank()) {
-                query.where(follower.name.containsIgnoreCase(nameLike));
+                query.where(
+                    Expressions.booleanTemplate("{0} ILIKE {1}", follower.name, "%" + nameLike.trim() + "%")
+                );
             }
         } else if (type.equals("following")) {
             query.join(follow.following, following)
                 .where(follow.follower.id.eq(followeeId));
 
             if (nameLike != null && !nameLike.isBlank()) {
-                query.where(following.name.containsIgnoreCase(nameLike));
+                query.where(
+                    Expressions.booleanTemplate("{0} ILIKE {1}", following.name, "%" + nameLike.trim() + "%")
+                );
             }
         }
 
