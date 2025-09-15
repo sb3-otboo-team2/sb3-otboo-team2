@@ -174,6 +174,7 @@ public class FollowServiceImpl implements FollowService {
      * @return PageResponse<FollowDto>
      */
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<FollowDto> getFollowings(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         log.info("[FollowService] 팔로잉 목록 조회 서비스 진입");
         List<Follow> followings = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "following");
@@ -225,5 +226,6 @@ public class FollowServiceImpl implements FollowService {
 //        }
 
         followRepository.delete(follow);
+        log.info("[FollowService] 팔로우 취소 완료");
     }
 }
