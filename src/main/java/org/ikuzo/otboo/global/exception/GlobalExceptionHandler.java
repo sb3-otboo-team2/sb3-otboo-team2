@@ -64,7 +64,7 @@ public class GlobalExceptionHandler {
             , DUPLICATED_ATTRIBUTE_NAME, REQUIRED_FIELD_MISSING
             , INVALID_ATTRIBUTE_OPTION -> HttpStatus.BAD_REQUEST;
 
-            case ATTRIBUTE_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case ATTRIBUTE_NOT_FOUND, FOLLOW_NOT_FOUND -> HttpStatus.NOT_FOUND;
 
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
