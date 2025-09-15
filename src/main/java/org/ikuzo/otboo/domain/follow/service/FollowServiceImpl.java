@@ -7,6 +7,7 @@ import org.ikuzo.otboo.domain.follow.dto.FollowCreateRequest;
 import org.ikuzo.otboo.domain.follow.dto.FollowDto;
 import org.ikuzo.otboo.domain.follow.dto.FollowSummaryDto;
 import org.ikuzo.otboo.domain.follow.entity.Follow;
+import org.ikuzo.otboo.domain.follow.exception.FollowNotFoundException;
 import org.ikuzo.otboo.domain.follow.mapper.FollowMapper;
 import org.ikuzo.otboo.domain.follow.repository.FollowRepository;
 import org.ikuzo.otboo.domain.user.dto.UserSummary;
@@ -18,6 +19,7 @@ import org.ikuzo.otboo.domain.follow.exception.FollowSelfNotAllowException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.AccessDeniedException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -172,6 +174,7 @@ public class FollowServiceImpl implements FollowService {
      * @return PageResponse<FollowDto>
      */
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<FollowDto> getFollowings(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         log.info("[FollowService] 팔로잉 목록 조회 서비스 진입");
         List<Follow> followings = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "following");
@@ -206,5 +209,23 @@ public class FollowServiceImpl implements FollowService {
             sortBy,
             sortDirection
         );
+    }
+
+    @Override
+    @Transactional
+    public void cancel(UUID followId) {
+        Follow follow = followRepository.findById(followId).orElseThrow(() -> FollowNotFoundException.notFoundException(followId));
+
+        // TODO: SpringSecurity 적용 후 로그인한 유저와 follow.getFollower 검증 리팩토링 예정
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        String email = authentication.getName();
+//        User user = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+//
+//        if (!follow.getFollower().getId().equals(user.getId())) {
+//            throw new AuthorizationDeniedException("팔로우를 취소할 권한이 없습니다.");
+//        }
+
+        followRepository.delete(follow);
+        log.info("[FollowService] 팔로우 취소 완료");
     }
 }
