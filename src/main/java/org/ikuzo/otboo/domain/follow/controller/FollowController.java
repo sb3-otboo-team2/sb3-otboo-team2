@@ -64,5 +64,6 @@ public class FollowController {
     public ResponseEntity<Void> cancelFollow(@PathVariable UUID followId) {
         log.info("[FollowController] 팔로우 취소 컨트롤러 진입 followId: {}", followId);
         followService.cancel(followId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }
