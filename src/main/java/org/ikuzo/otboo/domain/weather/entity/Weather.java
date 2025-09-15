@@ -2,14 +2,17 @@ package org.ikuzo.otboo.domain.weather.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.PrePersist;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.global.base.BaseEntity;
 
 @Entity
@@ -20,15 +23,15 @@ import org.ikuzo.otboo.global.base.BaseEntity;
 @Builder
 public class Weather extends BaseEntity {
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "user_id", nullable = false)
-//    private User user;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "forecasted_at", nullable = false)
-    private ZonedDateTime forecastedAt;
+    private Instant forecastedAt;
 
     @Column(name = "forecast_at", nullable = false)
-    private ZonedDateTime forecastAt;
+    private Instant forecastAt;
 
     @Column(name = "sky_status", nullable = false, length = 20)
     private String skyStatus; // CHECK (CLEAR, MOSTLY_CLOUDY, CLOUDY)
@@ -66,8 +69,4 @@ public class Weather extends BaseEntity {
     @Column(name = "humidity_compared")
     private Double humidityCompared;
 
-    @PrePersist
-    public void prePersist() {
-
-    }
 }
