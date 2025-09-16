@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket STOMP 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message-form {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .sent {
+            background-color: #e3f2fd;
+            text-align: right;
+        }
+        .received {
+            background-color: #f3e5f5;
+        }
+        .system {
+            background-color: #fff3cd;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket STOMP 테스트</h1>
+        
+        <div id="status" class="status disconnected">
+            연결되지 않음
+        </div>
+
+        <div class="message-form">
+            <h3>연결 설정</h3>
+            <div class="form-group">
+                <label for="serverUrl">서버 URL:</label>
+                <input type="text" id="serverUrl" value="http://localhost:8080/ws" placeholder="ws://localhost:8080/ws">
+            </div>
+            <button id="connectBtn" onclick="connect()">연결</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>연결 해제</button>
+        </div>
+
+        <div class="message-form">
+            <h3>메시지 전송</h3>
+            <div class="form-group">
+                <label for="senderId">발신자 ID:</label>
+                <input type="text" id="senderId" placeholder="UUID" value="94728e4f-c0c6-40eb-99d1-f6bf07d2aee4">
+            </div>
+            <div class="form-group">
+                <label for="receiverId">수신자 ID:</label>
+                <input type="text" id="receiverId" placeholder="UUID" value="94728e4f-c0c6-40eb-99d1-f6bf07d2aee1">
+            </div>
+            <div class="form-group">
+                <label for="messageContent">메시지 내용:</label>
+                <textarea id="messageContent" rows="3" placeholder="메시지를 입력하세요..."></textarea>
+            </div>
+            <button id="sendBtn" onclick="sendMessage()" disabled>메시지 전송</button>
+        </div>
+
+        <div class="message-form">
+            <h3>메시지 로그</h3>
+            <button onclick="clearMessages()">로그 지우기</button>
+            <div id="messages" class="messages"></div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let isConnected = false;
+
+        function connect() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            
+            if (!serverUrl) {
+                alert('서버 URL을 입력해주세요.');
+                return;
+            }
+
+            // SockJS 연결 생성
+            const socket = new SockJS(serverUrl);
+            stompClient = Stomp.over(socket);
+
+            // 디버그 로그 비활성화 (선택사항)
+            stompClient.debug = null;
+
+            // 연결 시도
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+                isConnected = true;
+                updateConnectionStatus(true);
+                
+                // 메시지 수신 구독 - 특정 DM 채널만 구독
+                const currentUserId = document.getElementById('senderId').value;
+                const receiverId = document.getElementById('receiverId').value;
+                
+                if (currentUserId && receiverId) {
+                    const dmKey = buildDmKey(currentUserId, receiverId);
+                    const subscriptionChannel = '/sub/direct-messages_' + dmKey;
+                    
+                    stompClient.subscribe(subscriptionChannel, function (message) {
+                        const messageData = JSON.parse(message.body);
+                        addMessage('received', `수신: ${JSON.stringify(messageData, null, 2)}`);
+                    });
+                    
+                    addMessage('system', `DM 채널 구독: ${subscriptionChannel}`);
+                } else {
+                    addMessage('system', '발신자 ID와 수신자 ID를 모두 입력해주세요.');
+                }
+
+                addMessage('system', 'WebSocket 연결이 성공했습니다.');
+            }, function (error) {
+                console.log('Connection error: ' + error);
+                addMessage('system', '연결 오류: ' + error);
+                updateConnectionStatus(false);
+            });
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+                addMessage('system', 'WebSocket 연결이 해제되었습니다.');
+            }
+            updateConnectionStatus(false);
+        }
+
+        function sendMessage() {
+            if (!isConnected) {
+                alert('먼저 연결해주세요.');
+                return;
+            }
+
+            const senderId = document.getElementById('senderId').value;
+            const receiverId = document.getElementById('receiverId').value;
+            const content = document.getElementById('messageContent').value;
+
+            if (!senderId || !receiverId || !content) {
+                alert('모든 필드를 입력해주세요.');
+                return;
+            }
+
+            const message = {
+                senderId: senderId,
+                receiverId: receiverId,
+                content: content
+            };
+
+            // 메시지 전송
+            stompClient.send("/pub/direct-messages_send", {}, JSON.stringify(message));
+            
+            addMessage('sent', `전송: ${JSON.stringify(message, null, 2)}`);
+            
+            // 입력 필드 초기화
+            document.getElementById('messageContent').value = '';
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const sendBtn = document.getElementById('sendBtn');
+
+            if (connected) {
+                statusElement.textContent = '연결됨';
+                statusElement.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                sendBtn.disabled = false;
+            } else {
+                statusElement.textContent = '연결되지 않음';
+                statusElement.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                sendBtn.disabled = true;
+                isConnected = false;
+            }
+        }
+
+        function addMessage(type, content) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `<strong>[${timestamp}]</strong><br>${content}`;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        function buildDmKey(userId1, userId2) {
+            // UUID를 문자열로 정렬하여 dmKey 생성
+            const sorted = [userId1, userId2].sort();
+            return sorted[0] + '_' + sorted[1];
+        }
+
+        // 페이지 로드 시 초기 상태 설정
+        window.onload = function() {
+            updateConnectionStatus(false);
+        };
+
+        // Enter 키로 메시지 전송
+        document.getElementById('messageContent').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

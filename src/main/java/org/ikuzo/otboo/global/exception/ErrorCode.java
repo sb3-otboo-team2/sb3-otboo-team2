@@ -4,6 +4,8 @@ import lombok.Getter;
 
 @Getter
 public enum ErrorCode {
+    // 사용자
+    DUPLICATE_USER("이미 존재하는 사용자입니다."),
 
     // NULL 검증
     REQUIRED_FIELD_MISSING("필수 필드 값이 누락되었습니다"),
