@@ -30,7 +30,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     private final ClothesAttributeDefRepository clothesAttributeDefRepository;
     private final ClothesAttributeDefMapper mapper;
 
-//    @PreAuthorize("hasRole('ADMIN')")
+    //    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
     public ClothesAttributeDefDto create(ClothesAttributeDefCreateRequest request) {
@@ -62,7 +62,8 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
     @Transactional
     @Override
-    public ClothesAttributeDefDto update(UUID definitionId, ClothesAttributeDefUpdateRequest request) {
+    public ClothesAttributeDefDto update(UUID definitionId,
+        ClothesAttributeDefUpdateRequest request) {
 
         String newName = normalizeNameOrThrow(request.name());
         List<String> selectableValues = normalizeValuesOrThrow(request.selectableValues());
@@ -77,10 +78,13 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         }
 
         def.update(newName, selectableValues);
-
-        log.info("[Service] 속성 수정 완료 - id: {}, name: {}", def.getId(), def.getName());
-
-        return mapper.toDto(def);
+        try {
+            ClothesAttributeDef saved = clothesAttributeDefRepository.save(def);
+            log.info("[Service] 속성 수정 완료 - id: {}, name: {}", saved.getId(), saved.getName());
+            return mapper.toDto(saved);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicatedAttributeNameException(newName);
+        }
     }
 
     private String normalizeNameOrThrow(String rawName) {
@@ -97,12 +101,17 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         }
         Set<String> set = new LinkedHashSet<>();
         for (String v : rawValues) {
-            if (v == null) continue;
+            if (v == null) {
+                continue;
+            }
             String t = v.trim();
-            if (!t.isEmpty()) set.add(t);
+            if (!t.isEmpty()) {
+                set.add(t);
+            }
         }
         if (set.isEmpty()) {
-            throw new MissingRequiredFieldException("selectableValues is empty after normalization");
+            throw new MissingRequiredFieldException(
+                "selectableValues is empty after normalization");
         }
         return new ArrayList<>(set);
     }
