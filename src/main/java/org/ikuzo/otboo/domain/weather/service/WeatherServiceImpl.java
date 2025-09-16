@@ -13,7 +13,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.user.exception.UserLocationMissingException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.domain.weather.client.KakaoLocalClient;
 import org.ikuzo.otboo.domain.weather.client.WeatherApiClient;
@@ -23,6 +25,7 @@ import org.ikuzo.otboo.domain.weather.dto.KakaoRegionResponse;
 import org.ikuzo.otboo.domain.weather.dto.RegionInfoDto;
 import org.ikuzo.otboo.domain.weather.dto.WeatherDto;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
+import org.ikuzo.otboo.domain.weather.exception.WeatherNoForecastException;
 import org.ikuzo.otboo.domain.weather.mapper.WeatherMapper;
 import org.ikuzo.otboo.domain.weather.repository.WeatherRepository;
 import org.ikuzo.otboo.domain.weather.util.KmaGridConverter;
@@ -32,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WeatherServiceImpl implements WeatherService {
 
     private final WeatherApiClient weatherApiClient;
@@ -65,15 +69,18 @@ public class WeatherServiceImpl implements WeatherService {
             .build();
     }
 
-    //단기예보 수집 → Weather 저장 → 변화 감지 후 알림
+    //단기예보 수집 -> Weather 저장 -> 변화 감지 후 알림
     @Transactional
     @Override
     public WeatherDto collectAndSaveForUser(UUID userId) {
+        log.debug("[WeatherService] 사용자 {} 날씨 수집 시작", userId);
+
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다.: " + userId)); //유저 예외처리 대기
 
         if (user.getLatitude() == null || user.getLongitude() == null) {
-            throw new IllegalStateException("User has no lat/lon");
+            log.warn("[WeatherService] 사용자 {}: 위도/경도 정보 없음 → 수집 불가", userId);
+            throw UserLocationMissingException.withUserId(userId);
         }
 
         XY xy = KmaGridConverter.toXY(user.getLongitude(), user.getLatitude());
@@ -84,6 +91,9 @@ public class WeatherServiceImpl implements WeatherService {
         String baseDate = base.get("baseDate");
         String baseTime = base.get("baseTime");
 
+        log.debug("[WeatherService] 사용자 {}: KMA API 호출 baseDate={}, baseTime={}, grid=({}, {})",
+            userId, baseDate, baseTime, xy.x(), xy.y());
+
         WeatherApiResponse resp = weatherApiClient.getVillageforecast(baseDate, baseTime, xy.x(), xy.y());
         List<WeatherApiResponse.Item> items = Optional.ofNullable(resp)
             .map(WeatherApiResponse::getResponse)
@@ -92,7 +102,7 @@ public class WeatherServiceImpl implements WeatherService {
             .map(WeatherApiResponse.Items::getItem)
             .orElse(List.of());
 
-        // 동일 fcstDate+fcstTime 기준 예보 묶음 만들기 → 가장 가까운 시각(첫 번째) 선택
+        // 동일 fcstDate+fcstTime 기준 예보 묶음 만들기 -> 가장 가까운 시각(첫 번째) 선택
         Map<String, Map<String, String>> grouped = new LinkedHashMap<>();
         for (WeatherApiResponse.Item it : items) {
             String key = it.getFcstDate() + it.getFcstTime();
@@ -100,8 +110,11 @@ public class WeatherServiceImpl implements WeatherService {
         }
 
         if (grouped.isEmpty()) {
-            throw new IllegalStateException("No forecast items from KMA");
+            log.warn("[WeatherService] 사용자 {}: 기상청 응답 없음 (baseDate={}, baseTime={})", userId, baseDate, baseTime);
+            throw WeatherNoForecastException.withBaseAndGrid(baseDate, baseTime, xy.x(), xy.y());
         }
+
+        log.debug("[WeatherService] 사용자 {}: 기상청 예보 {}건 수신", userId, items.size());
 
         // 첫 번째(가장 이른 키) 선택
         String firstKey = grouped.keySet().iterator().next();
@@ -112,13 +125,15 @@ public class WeatherServiceImpl implements WeatherService {
             cat);
         Weather saved = weatherRepository.save(w);
 
-        // 이전값 대비 변화 감지 → 알림
+        log.info("[WeatherService] 사용자 {} 날씨 저장 완료: forecastAt={}", userId, saved.getForecastAt());
+
+        // 이전값 대비 변화 감지 -> 알림
         weatherAlertServiceImpl.checkAndNotify(user, saved);
 
         return weatherMapper.toDto(saved);
     }
 
-    // ===== 카테고리 매핑 로직 =====
+    // 카테고리 매핑 로직
 
     private Weather mapForecastToEntity(User user,
                                         String baseDate, String baseTime,

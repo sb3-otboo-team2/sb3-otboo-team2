@@ -58,11 +58,11 @@ public class WeatherCollectJobConfig {
                     weatherServiceImpl.collectAndSaveForUser(u.getId());
                     success++;
                 } catch (Exception e) {
-                    log.warn("Weather collect failed for user {}: {}", u.getId(), e.getMessage());
+                    log.warn("[WeatherCollectJobConfig] 사용자 {}의 날씨 수집 실패: {}", u.getId(), e.getMessage());
                     fail++;
                 }
             }
-            log.info("Weather batch done. success={}, fail={}", success, fail);
+            log.info("[WeatherCollectJobConfig] 날씨 배치 작업 완료. 성공 {}건, 실패 {}건", success, fail);
             return RepeatStatus.FINISHED;
         };
     }

@@ -25,7 +25,7 @@ public class WeatherBatchScheduler {
 
     @Value("${weather.batch.cron:}")
     private String cron;
-    
+
     @Scheduled(cron = "${weather.batch.cron:0 0/30 * * * *}", zone = "Asia/Seoul")
     public void run() {
         if (!enabled) {
@@ -37,7 +37,7 @@ public class WeatherBatchScheduler {
                 .toJobParameters();
             jobLauncher.run(weatherCollectJob, params);
         } catch (Exception e) {
-            log.error("Weather batch run error", e);
+            log.error("날씨 배치작업에 실패했습니다.", e);
         }
     }
 }

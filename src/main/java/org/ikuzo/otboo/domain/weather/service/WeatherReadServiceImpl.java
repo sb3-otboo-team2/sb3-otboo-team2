@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.weather.client.KakaoLocalClient;
 import org.ikuzo.otboo.domain.weather.client.WeatherApiClient;
 import org.ikuzo.otboo.domain.weather.client.WeatherApiResponse;
@@ -27,6 +28,7 @@ import org.ikuzo.otboo.domain.weather.dto.WeatherAPILocation;
 import org.ikuzo.otboo.domain.weather.dto.WeatherDto;
 import org.ikuzo.otboo.domain.weather.dto.WindSpeedDto;
 import org.ikuzo.otboo.domain.weather.dto.WindWord;
+import org.ikuzo.otboo.domain.weather.exception.WeatherNoForecastException;
 import org.ikuzo.otboo.domain.weather.util.KmaGridConverter;
 import org.ikuzo.otboo.domain.weather.util.KmaGridConverter.XY;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WeatherReadServiceImpl implements WeatherReadService {
 
     private final WeatherApiClient weatherApiClient;
@@ -50,6 +53,7 @@ public class WeatherReadServiceImpl implements WeatherReadService {
     @Transactional(readOnly = true)
     public WeatherAPILocation getLocation(double latitude, double longitude) {
         XY xy = KmaGridConverter.toXY(longitude, latitude);
+        log.debug("[WeatherReadService] 좌표 변환 시작: lat={}, lon={} → grid=({}, {})", latitude, longitude, xy.x(), xy.y());
 
         KakaoRegionResponse kakao = kakaoLocalClient.coord2region(longitude, latitude);
         List<String> names = new ArrayList<>();
@@ -66,6 +70,7 @@ public class WeatherReadServiceImpl implements WeatherReadService {
             }
         }
 
+        log.info("[WeatherReadService] 좌표({}, {}) → 행정구역명: {}", latitude, longitude, names);
         return WeatherAPILocation.builder()
             .latitude(latitude)
             .longitude(longitude)
@@ -80,6 +85,7 @@ public class WeatherReadServiceImpl implements WeatherReadService {
     @Override
     @Transactional(readOnly = true)
     public List<WeatherDto> getWeatherByCoordinates(double latitude, double longitude) {
+        log.debug("[WeatherReadService] 날씨 조회 시작: lat={}, lon={}", latitude, longitude);
         XY xy = KmaGridConverter.toXY(longitude, latitude);
 
         Map<String, String> base = weatherApiClient.computeBaseDateTime(Instant.now());
@@ -95,7 +101,9 @@ public class WeatherReadServiceImpl implements WeatherReadService {
             .orElse(List.of());
 
         if (items.isEmpty()) {
-            throw new IllegalStateException("No forecast items from KMA");
+            log.warn("[WeatherReadService] 날씨 조회 실패: 기상청 예보 없음 (lat={}, lon={}, baseDate={}, baseTime={})",
+                latitude, longitude, baseDate, baseTime);
+            throw WeatherNoForecastException.withLatLonAndBase(latitude, longitude, baseDate, baseTime);
         }
 
         Map<String, Map<String, String>> byFcst = new TreeMap<>();
@@ -142,6 +150,9 @@ public class WeatherReadServiceImpl implements WeatherReadService {
                     .speed(wsd).asWord(windWord).build())
                 .build());
         }
+
+        log.info("[WeatherReadService] 날씨 조회 완료: 좌표({}, {}), 예보 {}건", latitude, longitude, items.size());
+
         return result;
     }
 

@@ -2,6 +2,7 @@ package org.ikuzo.otboo.domain.weather.service;
 
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.ikuzo.otboo.domain.weather.repository.WeatherRepository;
@@ -10,23 +11,27 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WeatherAlertServiceImpl implements WeatherAlertService {
 
     private final WeatherRepository weatherRepository;
 
     /**
-     * 간단 정책: - 강수(PTY != NONE)로 바뀐 경우 - 3시간 내 예보에서 기온 변화 절대값 ≥ 5℃
+     * 강수(PTY != NONE)로 바뀐 경우
      */
     @Transactional(readOnly = true)
     @Override
     public void checkAndNotify(User user, Weather latest) {
         Optional<Weather> prevOpt = weatherRepository.findTop1ByUserOrderByForecastAtDesc(user);
         if (prevOpt.isEmpty()) {
+            log.debug("[WeatherAlertService] 사용자 {}: 이전 예보 없음 → 알림 미발송", user.getId());
             return;
         }
 
         Weather prev = prevOpt.get();
-
+        log.debug("[WeatherAlertService] 사용자 {}: 이전 기온={}, 현재 기온={}, 이전 강수={}, 현재 강수={}",
+            user.getId(), prev.getTemperatureCurrent(), latest.getTemperatureCurrent(),
+            prev.getPrecipitationType(), latest.getPrecipitationType());
         // 강수 시작
         boolean startedRaining = !"NONE".equals(latest.getPrecipitationType())
             && ("NONE".equals(prev.getPrecipitationType()));
@@ -38,8 +43,11 @@ public class WeatherAlertServiceImpl implements WeatherAlertService {
         }
 
         if (startedRaining) {
+            log.info("[WeatherAlertService] 사용자 {}: 강수 시작 감지 → 알림 발송 예정", user.getId());
 //            notificationService.notifyWarning(user, "비 소식 알림", "곧 비가 올 예정입니다. 우산을 챙기세요!");
         } else if (tempJump) {
+            log.info("[WeatherAlertService] 사용자 {}: 기온 급격 변화 감지 (Δ={}℃) → 알림 발송 예정",
+                user.getId(), latest.getTemperatureCurrent() - prev.getTemperatureCurrent());
             String msg = (latest.getTemperatureCurrent() - prev.getTemperatureCurrent()) > 0
                 ? "기온이 급상승 중입니다. 가벼운 옷차림을 고려하세요."
                 : "기온이 급하강 중입니다. 겉옷을 준비하세요.";
