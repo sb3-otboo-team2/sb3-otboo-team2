@@ -1,6 +1,8 @@
 package org.ikuzo.otboo.domain.clothes.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,15 +39,13 @@ public class ClothesController implements ClothesApi {
         @RequestParam UUID ownerId,
         @RequestParam(required = false) String cursor,
         @RequestParam(required = false) UUID idAfter,
-        @RequestParam Integer limit,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit,
         @RequestParam(required = false) String typeEqual
     ) {
         log.info("[Controller] 의상 목록 조회 요청 - ownerId: {}", ownerId);
 
-        int pageSize = (limit == null) ? 20 : limit;
-
         PageResponse<ClothesDto> response =
-            clothesService.getWithCursor(ownerId, cursor, idAfter, pageSize, typeEqual);
+            clothesService.getWithCursor(ownerId, cursor, idAfter, limit, typeEqual);
 
         log.info("[Controller] 의상 목록 조회 완료 - ownerId: {}", ownerId);
 
@@ -59,7 +59,8 @@ public class ClothesController implements ClothesApi {
     @Override
     public ResponseEntity<ClothesDto> create(
         @RequestPart("request") @Valid ClothesCreateRequest request,
-        @RequestPart(value = "image", required = false) MultipartFile image) {
+        @RequestPart(value = "image", required = false) MultipartFile image
+    ) {
 
         log.info("[Controller] 의상 등록 요청 - ownerId: {}, name: {}",
             request.ownerId(), request.name());

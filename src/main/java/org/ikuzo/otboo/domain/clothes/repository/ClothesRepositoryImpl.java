@@ -1,7 +1,5 @@
 package org.ikuzo.otboo.domain.clothes.repository;
 
-import com.querydsl.core.BooleanBuilder;
-import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.Instant;
@@ -32,18 +30,14 @@ public class ClothesRepositoryImpl implements ClothesRepositoryCustom {
     ) {
         QClothes c = QClothes.clothes;
 
-        BooleanBuilder where = new BooleanBuilder()
-            .and(c.owner.id.eq(ownerId))
-            .and(eqType(c, typeEqual))
-            .and(cursorCondition(c, cursor, idAfter));
-
-        OrderSpecifier<?> orderByCreatedDesc = c.createdAt.desc();
-        OrderSpecifier<?> orderByIdDesc = c.id.desc();
-
         return queryFactory
             .selectFrom(c)
-            .where(where)
-            .orderBy(orderByCreatedDesc, orderByIdDesc)
+            .where(
+                c.owner.id.eq(ownerId),
+                eqType(c, typeEqual),
+                cursorCondition(c, cursor, idAfter)
+            )
+            .orderBy(c.createdAt.desc(), c.id.desc())
             .limit(limit + 1)
             .fetch();
     }

@@ -14,7 +14,7 @@ import org.ikuzo.otboo.domain.clothes.entity.Clothes;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttribute;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
 import org.ikuzo.otboo.domain.clothes.exception.AttributeDefinitionNotFoundException;
-import org.ikuzo.otboo.domain.clothes.exception.ClothesDtoConvetingFailedException;
+import org.ikuzo.otboo.domain.clothes.exception.ClothesDtoConvertingFailedException;
 import org.ikuzo.otboo.domain.clothes.exception.ClothesNotFoundException;
 import org.ikuzo.otboo.domain.clothes.exception.InvalidAttributeOptionException;
 import org.ikuzo.otboo.domain.clothes.exception.MissingRequiredFieldException;
@@ -254,7 +254,7 @@ public class ClothesServiceImpl implements ClothesService {
             .map(c -> {
                 ClothesDto dto = clothesMapper.toDto(c);
                 if (dto == null) {
-                    throw new ClothesDtoConvetingFailedException(c.getId());
+                    throw new ClothesDtoConvertingFailedException(c.getId());
                 }
                 return dto;
             })
