@@ -41,6 +41,49 @@ public class ClothesServiceImpl implements ClothesService {
     private final ClothesMapper clothesMapper;
     private final ImageSwapHelper imageSwapHelper;
 
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<ClothesDto> getWithCursor(
+        UUID ownerId,
+        String cursor,
+        UUID idAfter,
+        int limit,
+        String typeEqual
+    ) {
+        log.info("[Service] 의상 목록 조회 시작 - ownerId: {}", ownerId);
+
+        List<Clothes> result = clothesRepository.findClothesWithCursor(
+            ownerId, cursor, idAfter, limit, typeEqual
+        );
+
+        boolean hasNext = result.size() > limit;
+        List<Clothes> content = hasNext ? result.subList(0, limit) : result;
+
+        Instant nextCursor = null;
+        UUID nextIdAfter = null;
+        if (hasNext && !content.isEmpty()) {
+            Clothes last = content.get(content.size() - 1);
+            nextCursor = last.getCreatedAt();
+            nextIdAfter = last.getId();
+        }
+
+        Long totalCount = clothesRepository.countClothes(ownerId, typeEqual);
+
+        List<ClothesDto> data = convertClothesToDto(content);
+
+        log.info("[Service] 의상 목록 조회 완료 - ownerId: {}", ownerId);
+
+        return new PageResponse<>(
+            data,
+            nextCursor,
+            nextIdAfter,
+            hasNext,
+            totalCount,
+            "createdAt",
+            "DESCENDING"
+        );
+    }
+
     @Transactional
     @Override
     public ClothesDto create(ClothesCreateRequest request, MultipartFile image) {
@@ -121,49 +164,6 @@ public class ClothesServiceImpl implements ClothesService {
         imageSwapHelper.deleteAfterCommit(oldImageUrl, "의상 삭제");
 
         log.info("[Service] 의상 삭제 완료 - clothesId: {}", clothesId);
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public PageResponse<ClothesDto> findAll(
-        UUID ownerId,
-        String cursor,
-        UUID idAfter,
-        int limit,
-        String typeEqual
-    ) {
-        log.info("[Service] 의상 목록 조회 시작 - ownerId: {}", ownerId);
-
-        List<Clothes> result = clothesRepository.findClothesWithCursor(
-            ownerId, cursor, idAfter, limit, typeEqual
-        );
-
-        boolean hasNext = result.size() > limit;
-        List<Clothes> content = hasNext ? result.subList(0, limit) : result;
-
-        Instant nextCursor = null;
-        UUID nextIdAfter = null;
-        if (hasNext && !content.isEmpty()) {
-            Clothes last = content.get(content.size() - 1);
-            nextCursor = last.getCreatedAt();
-            nextIdAfter = last.getId();
-        }
-
-        Long totalCount = clothesRepository.countClothes(ownerId, typeEqual);
-
-        List<ClothesDto> data = convertClothesToDto(content);
-
-        log.info("[Service] 의상 목록 조회 완료 - ownerId: {}", ownerId);
-
-        return new PageResponse<>(
-            data,
-            nextCursor,
-            nextIdAfter,
-            hasNext,
-            totalCount,
-            "createdAt",
-            "DESCENDING"
-        );
     }
 
     private void validateClothesCreateRequest(ClothesCreateRequest request) {

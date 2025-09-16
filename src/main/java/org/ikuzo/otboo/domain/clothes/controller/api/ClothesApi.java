@@ -10,12 +10,40 @@ import java.util.UUID;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesDto;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesCreateRequest;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesUpdateRequest;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.exception.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "의상 관리", description = "의상 관련 API")
 public interface ClothesApi {
+
+    @Operation(summary = "의상 목록 조회")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "의상 목록 조회 성공",
+            content = @Content(
+                mediaType = "*/*",
+                schema = @Schema(implementation = ClothesDto.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "의상 목록 조회 실패",
+            content = @Content(
+                mediaType = "*/*",
+                schema = @Schema(implementation = ErrorResponse.class)
+            )
+        )
+    })
+    ResponseEntity<PageResponse<ClothesDto>> getWithCursor(
+        UUID ownerId,
+        String cursor,
+        UUID idAfter,
+        Integer limit,
+        String typeEqual
+    );
 
     @Operation(summary = "의상 등록")
     @ApiResponses({

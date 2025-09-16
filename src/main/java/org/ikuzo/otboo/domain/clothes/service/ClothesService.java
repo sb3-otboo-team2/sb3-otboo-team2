@@ -15,7 +15,7 @@ public interface ClothesService {
 
     void delete(UUID clothesId);
 
-    PageResponse<ClothesDto> findAll(
+    PageResponse<ClothesDto> getWithCursor(
         UUID ownerId, String cursor, UUID idAfter, int limit, String typeEqual
     );
 

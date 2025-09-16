@@ -32,6 +32,26 @@ public class ClothesController implements ClothesApi {
 
     private final ClothesService clothesService;
 
+    @GetMapping
+    public ResponseEntity<PageResponse<ClothesDto>> getWithCursor(
+        @RequestParam UUID ownerId,
+        @RequestParam(required = false) String cursor,
+        @RequestParam(required = false) UUID idAfter,
+        @RequestParam Integer limit,
+        @RequestParam(required = false) String typeEqual
+    ) {
+        log.info("[Controller] 의상 목록 조회 요청 - ownerId: {}", ownerId);
+
+        int pageSize = (limit == null) ? 20 : limit;
+
+        PageResponse<ClothesDto> response =
+            clothesService.getWithCursor(ownerId, cursor, idAfter, pageSize, typeEqual);
+
+        log.info("[Controller] 의상 목록 조회 완료 - ownerId: {}", ownerId);
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
     @PostMapping(
         consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE
@@ -84,25 +104,5 @@ public class ClothesController implements ClothesApi {
         log.info("[Controller] 의상 삭제 완료 - clothesId: {}", clothesId);
 
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-    }
-
-    @GetMapping
-    public ResponseEntity<PageResponse<ClothesDto>> getClothesCursor(
-        @RequestParam UUID ownerId,
-        @RequestParam(required = false) String cursor,
-        @RequestParam(required = false) UUID idAfter,
-        @RequestParam Integer limit,
-        @RequestParam(required = false) String typeEqual
-    ) {
-        log.info("[Controller] 의상 목록 조회 요청 - ownerId: {}", ownerId);
-
-        int pageSize = (limit == null) ? 20 : limit;
-
-        PageResponse<ClothesDto> response =
-            clothesService.findAll(ownerId, cursor, idAfter, pageSize, typeEqual);
-
-        log.info("[Controller] 의상 목록 조회 완료 - ownerId: {}", ownerId);
-
-        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }
