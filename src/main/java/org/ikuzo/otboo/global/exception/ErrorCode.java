@@ -20,7 +20,6 @@ public enum ErrorCode {
 
     // 속성 옵션
     INVALID_ATTRIBUTE_OPTION("해당 속성에 존재하지 않는 옵션 값입니다"),
-    OPTION_VALUE_NOT_FOUND("존재하지 않는 옵션입니다"),
 
     // 팔로우
     FOLLOW_SELF_NOT_ALLOWED("자기 자신은 팔로우 할 수 없습니다."),
