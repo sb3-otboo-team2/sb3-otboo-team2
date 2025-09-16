@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.clothes.service.impl;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.ikuzo.otboo.domain.clothes.entity.Clothes;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttribute;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
 import org.ikuzo.otboo.domain.clothes.exception.AttributeDefinitionNotFoundException;
+import org.ikuzo.otboo.domain.clothes.exception.ClothesDtoConvertingFailedException;
 import org.ikuzo.otboo.domain.clothes.exception.ClothesNotFoundException;
 import org.ikuzo.otboo.domain.clothes.exception.InvalidAttributeOptionException;
 import org.ikuzo.otboo.domain.clothes.exception.MissingRequiredFieldException;
@@ -22,6 +24,7 @@ import org.ikuzo.otboo.domain.clothes.repository.ClothesRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothesService;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.util.ImageSwapHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +40,49 @@ public class ClothesServiceImpl implements ClothesService {
     private final ClothesAttributeDefRepository clothesAttributeDefRepository;
     private final ClothesMapper clothesMapper;
     private final ImageSwapHelper imageSwapHelper;
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<ClothesDto> getWithCursor(
+        UUID ownerId,
+        String cursor,
+        UUID idAfter,
+        int limit,
+        String typeEqual
+    ) {
+        log.info("[Service] 의상 목록 조회 시작 - ownerId: {}", ownerId);
+
+        List<Clothes> result = clothesRepository.findClothesWithCursor(
+            ownerId, cursor, idAfter, limit, typeEqual
+        );
+
+        boolean hasNext = result.size() > limit;
+        List<Clothes> content = hasNext ? result.subList(0, limit) : result;
+
+        Instant nextCursor = null;
+        UUID nextIdAfter = null;
+        if (hasNext && !content.isEmpty()) {
+            Clothes last = content.get(content.size() - 1);
+            nextCursor = last.getCreatedAt();
+            nextIdAfter = last.getId();
+        }
+
+        Long totalCount = clothesRepository.countClothes(ownerId, typeEqual);
+
+        List<ClothesDto> data = convertClothesToDto(content);
+
+        log.info("[Service] 의상 목록 조회 완료 - ownerId: {}", ownerId);
+
+        return new PageResponse<>(
+            data,
+            nextCursor,
+            nextIdAfter,
+            hasNext,
+            totalCount,
+            "createdAt",
+            "DESCENDING"
+        );
+    }
 
     @Transactional
     @Override
@@ -68,7 +114,6 @@ public class ClothesServiceImpl implements ClothesService {
             saved.getOwner().getId(), saved.getName());
 
         return clothesMapper.toDto(saved);
-
     }
 
     @Transactional
@@ -119,7 +164,6 @@ public class ClothesServiceImpl implements ClothesService {
         imageSwapHelper.deleteAfterCommit(oldImageUrl, "의상 삭제");
 
         log.info("[Service] 의상 삭제 완료 - clothesId: {}", clothesId);
-
     }
 
     private void validateClothesCreateRequest(ClothesCreateRequest request) {
@@ -201,5 +245,19 @@ public class ClothesServiceImpl implements ClothesService {
         List<AttributeOption> options = def.getOptions();
         return options == null ? List.of()
             : options.stream().map(AttributeOption::getValue).toList();
+    }
+
+
+    private List<ClothesDto> convertClothesToDto(List<Clothes> clothes) {
+
+        return clothes.stream()
+            .map(c -> {
+                ClothesDto dto = clothesMapper.toDto(c);
+                if (dto == null) {
+                    throw new ClothesDtoConvertingFailedException(c.getId());
+                }
+                return dto;
+            })
+            .toList();
     }
 }
