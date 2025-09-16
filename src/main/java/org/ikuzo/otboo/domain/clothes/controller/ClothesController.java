@@ -9,14 +9,17 @@ import org.ikuzo.otboo.domain.clothes.dto.ClothesDto;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesCreateRequest;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesUpdateRequest;
 import org.ikuzo.otboo.domain.clothes.service.ClothesService;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -81,5 +84,25 @@ public class ClothesController implements ClothesApi {
         log.info("[Controller] 의상 삭제 완료 - clothesId: {}", clothesId);
 
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @GetMapping
+    public ResponseEntity<PageResponse<ClothesDto>> getClothesCursor(
+        @RequestParam UUID ownerId,
+        @RequestParam(required = false) String cursor,
+        @RequestParam(required = false) UUID idAfter,
+        @RequestParam Integer limit,
+        @RequestParam(required = false) String typeEqual
+    ) {
+        log.info("[Controller] 의상 목록 조회 요청 - ownerId: {}", ownerId);
+
+        int pageSize = (limit == null) ? 20 : limit;
+
+        PageResponse<ClothesDto> response =
+            clothesService.findAll(ownerId, cursor, idAfter, pageSize, typeEqual);
+
+        log.info("[Controller] 의상 목록 조회 완료 - ownerId: {}", ownerId);
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

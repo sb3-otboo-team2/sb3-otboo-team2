@@ -10,6 +10,7 @@ public enum ErrorCode {
 
     // 의상
     CLOTHES_NOT_FOUND("존재하지 않는 의상입니다"),
+    CLOTHING_MAPPER_CONVERSION_FAILED("Clothes -> ClothesDto로의 변환에 실패하였습니다"),
 
     // 의상 속성
     DUPLICATED_ATTRIBUTE_NAME("이미 존재하는 속성 이름입니다"),
