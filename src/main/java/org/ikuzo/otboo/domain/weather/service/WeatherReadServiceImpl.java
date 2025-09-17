@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.weather.service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -90,39 +91,149 @@ public class WeatherReadServiceImpl implements WeatherReadService {
         log.debug("[WeatherReadService] 날씨 조회 시작: lat={}, lon={}", latitude, longitude);
         XY xy = KmaGridConverter.toXY(longitude, latitude);
 
-        Map<String, String> base = weatherApiClient.computeBaseDateTime(Instant.now());
+        // 오늘 기준 예보 수집
+        FetchResult today = fetchForecastItems(Instant.now(), xy.x(), xy.y());
+        if (today.items().isEmpty()) {
+            throw WeatherNoForecastException.withLatLonAndBase(latitude, longitude, today.baseDate(), today.baseTime());
+        }
+
+        // 어제 기준 예보 수집 (전일 비교용)
+        FetchResult yesterday = fetchForecastItems(Instant.now().minus(Duration.ofDays(1)), xy.x(), xy.y());
+
+        // 오늘 예보 아이템을 시각키(fcstDate+fcstTime)로 묶기
+        Map<String, Map<String, String>> byFcst = groupByFcst(today.items());
+
+        // 비교 인덱스 구성 (현재/전일 TMP, REH를 fcstKey로 조회할 수 있게)
+        ComparisonIndex index = buildComparisonIndex(byFcst, yesterday.items());
+
+        // 일 최저/최고 보정 값 계산 (TMN/TMX 우선, 없으면 TMP로 대체)
+        DailyExtrema extrema = computeDailyExtrema(byFcst);
+
+        // 위치 정보
+        WeatherAPILocation loc = getLocation(latitude, longitude);
+
+        // DTO 빌드
+        List<WeatherDto> all = buildWeatherDtos(byFcst, today.baseDate(), today.baseTime(), loc, index, extrema);
+
+        // 오늘(Asia/Seoul) 이후 슬롯만 최대 5개
+        log.info("[WeatherReadService] 날씨 조회 완료: 좌표({}, {})", latitude, longitude);
+
+        return filterTodayUpcomingLimit(all, 5);
+    }
+
+
+    private FetchResult fetchForecastItems(Instant baseInstant, int nx, int ny) {
+        Map<String, String> base = weatherApiClient.computeBaseDateTime(baseInstant);
         String baseDate = base.get("baseDate");
         String baseTime = base.get("baseTime");
 
-        WeatherApiResponse resp = weatherApiClient.getVillageforecast(baseDate, baseTime, xy.x(), xy.y());
-        var items = Optional.ofNullable(resp)
+        WeatherApiResponse resp = weatherApiClient.getVillageforecast(baseDate, baseTime, nx, ny);
+        List<WeatherApiResponse.Item> items = Optional.ofNullable(resp)
             .map(WeatherApiResponse::getResponse)
             .map(WeatherApiResponse.Response::getBody)
             .map(WeatherApiResponse.Body::getItems)
             .map(WeatherApiResponse.Items::getItem)
             .orElse(List.of());
 
-        if (items.isEmpty()) {
-            log.warn("[WeatherReadService] 날씨 조회 실패: 기상청 예보 없음 (lat={}, lon={}, baseDate={}, baseTime={})",
-                latitude, longitude, baseDate, baseTime);
-            throw WeatherNoForecastException.withLatLonAndBase(latitude, longitude, baseDate, baseTime);
-        }
+        return new FetchResult(baseDate, baseTime, items);
+    }
 
+    private Map<String, Map<String, String>> groupByFcst(List<WeatherApiResponse.Item> items) {
         Map<String, Map<String, String>> byFcst = new TreeMap<>();
-        for (var it : items) {
+        for (WeatherApiResponse.Item it : items) {
             String key = it.getFcstDate() + it.getFcstTime();
             byFcst.computeIfAbsent(key, k -> new HashMap<>()).put(it.getCategory(), it.getFcstValue());
         }
+        return byFcst;
+    }
 
-        WeatherAPILocation loc = getLocation(latitude, longitude);
+    private ComparisonIndex buildComparisonIndex(Map<String, Map<String, String>> byFcst,
+                                                 List<WeatherApiResponse.Item> itemsPrev) {
+        Map<String, Double> tmpByKey = new HashMap<>();
+        Map<String, Double> rehByKey = new HashMap<>();
+        for (Map.Entry<String, Map<String, String>> e : byFcst.entrySet()) {
+            String key = e.getKey();
+            Map<String, String> cat = e.getValue();
+            Double tmp = parseDouble(cat.get("TMP"));
+            Double reh = parseDouble(cat.get("REH"));
+            if (tmp != null) {
+                tmpByKey.put(key, tmp);
+            }
+            if (reh != null) {
+                rehByKey.put(key, reh);
+            }
+        }
 
+        Map<String, Double> tmpPrevByKey = new HashMap<>();
+        Map<String, Double> rehPrevByKey = new HashMap<>();
+        for (WeatherApiResponse.Item it : itemsPrev) {
+            String key = it.getFcstDate() + it.getFcstTime();
+            String cat = it.getCategory();
+            if ("TMP".equals(cat)) {
+                tmpPrevByKey.put(key, parseDouble(it.getFcstValue()));
+            } else if ("REH".equals(cat)) {
+                rehPrevByKey.put(key, parseDouble(it.getFcstValue()));
+            }
+        }
+        return new ComparisonIndex(tmpByKey, rehByKey, tmpPrevByKey, rehPrevByKey);
+    }
+
+    private DailyExtrema computeDailyExtrema(Map<String, Map<String, String>> byFcst) {
+        Map<String, Double> dailyMinTmp = new HashMap<>();
+        Map<String, Double> dailyMaxTmp = new HashMap<>();
+        Map<String, Double> dailyTMN = new HashMap<>();
+        Map<String, Double> dailyTMX = new HashMap<>();
+
+        for (Map.Entry<String, Map<String, String>> e : byFcst.entrySet()) {
+            String key = e.getKey();
+            String ymd = key.substring(0, 8);
+            Map<String, String> cat = e.getValue();
+
+            Double tmp = parseDouble(cat.get("TMP"));
+            Double tmn = parseDouble(cat.get("TMN"));
+            Double tmx = parseDouble(cat.get("TMX"));
+
+            if (tmp != null) {
+                dailyMinTmp.merge(ymd, tmp, Math::min);
+                dailyMaxTmp.merge(ymd, tmp, Math::max);
+            }
+            if (tmn != null) {
+                dailyTMN.merge(ymd, tmn, Math::min);
+            }
+            if (tmx != null) {
+                dailyTMX.merge(ymd, tmx, Math::max);
+            }
+        }
+
+        Map<String, Double> minByDay = new HashMap<>();
+        Map<String, Double> maxByDay = new HashMap<>();
+        for (String ymd : dailyMinTmp.keySet()) {
+            minByDay.put(ymd, dailyTMN.getOrDefault(ymd, dailyMinTmp.get(ymd)));
+            maxByDay.put(ymd, dailyTMX.getOrDefault(ymd, dailyMaxTmp.get(ymd)));
+        }
+        return new DailyExtrema(minByDay, maxByDay);
+    }
+
+    private List<WeatherDto> buildWeatherDtos(Map<String, Map<String, String>> byFcst,
+                                              String baseDate,
+                                              String baseTime,
+                                              WeatherAPILocation loc,
+                                              ComparisonIndex index,
+                                              DailyExtrema extrema) {
         List<WeatherDto> result = new ArrayList<>();
-        for (var entry : byFcst.entrySet()) {
+
+        for (Map.Entry<String, Map<String, String>> entry : byFcst.entrySet()) {
             String fcstKey = entry.getKey();
             Map<String, String> cat = entry.getValue();
 
             Instant forecastedAt = toInstant(baseDate, baseTime);
             Instant forecastAt = toInstant(fcstKey.substring(0, 8), fcstKey.substring(8, 12));
+
+            String ymd = fcstKey.substring(0, 8);
+            String hm = fcstKey.substring(8, 12);
+
+            String prevKey = LocalDate.parse(ymd, DATE).minusDays(1).format(DATE) + hm;
+            String prev3hKey = minusHoursKey(fcstKey, 3);
 
             Double tmp = parseDouble(cat.get("TMP"));
             Double tmn = parseDouble(cat.get("TMN"));
@@ -136,6 +247,17 @@ public class WeatherReadServiceImpl implements WeatherReadService {
             PrecipitationType pty = mapPty(cat.get("PTY"));
             WindWord windWord = toWindWord(wsd);
 
+            // 비교값: 전일 같은 시각 → 없으면 직전 3시간
+            Double tempPrev = firstNonNull(index.tmpPrevByKey().get(prevKey), index.tmpByKey().get(prev3hKey));
+            Double rehPrev = firstNonNull(index.rehPrevByKey().get(prevKey), index.rehByKey().get(prev3hKey));
+
+            Double tempCompared = (tmp != null && tempPrev != null) ? round1(tmp - tempPrev) : null;
+            Double humidCompared = (reh != null && rehPrev != null) ? round1(reh - rehPrev) : null;
+
+            Double minForDay = (tmn != null) ? tmn : extrema.minByDay().get(ymd);
+            Double maxForDay = (tmx != null) ? tmx : extrema.maxByDay().get(ymd);
+            Double probability01 = (pop != null) ? pop / 100.0 : null;
+
             result.add(WeatherDto.builder()
                 .id(UUID.randomUUID())
                 .forecastedAt(forecastedAt)
@@ -143,36 +265,53 @@ public class WeatherReadServiceImpl implements WeatherReadService {
                 .location(loc)
                 .skyStatus(sky)
                 .precipitation(PrecipitationDto.builder()
-                    .type(pty).amount(pcp).probability(pop).build())
+                    .type(pty).amount(pcp).probability(probability01).build())
                 .humidity(HumidityDto.builder()
-                    .current(reh).comparedToDayBefore(null).build())
+                    .current(reh).comparedToDayBefore(humidCompared).build())
                 .temperature(TemperatureDto.builder()
-                    .current(tmp).comparedToDayBefore(null).min(tmn).max(tmx).build())
+                    .current(tmp).comparedToDayBefore(tempCompared).min(minForDay).max(maxForDay).build())
                 .windSpeed(WindSpeedDto.builder()
                     .speed(wsd).asWord(windWord).build())
                 .build());
-
-
         }
 
-        log.info("[WeatherReadService] 날씨 조회 완료: 좌표({}, {}), 예보 {}건", latitude, longitude, items.size());
-        // 시간 오름차순 정렬
-        result.sort(Comparator.comparing(WeatherDto::getForecastAt));
-
-        // 오늘(Asia/Seoul) 기준, 현재 시각 이후의 슬롯만 최대 5개
-        LocalDate today = LocalDate.now(SEOUL);
-        Instant now = Instant.now();
-
-        List<WeatherDto> limited = result.stream()
-            .filter(dto -> dto.getForecastAt().atZone(SEOUL).toLocalDate().equals(today))
-            .filter(dto -> !dto.getForecastAt().isBefore(now))
-            .limit(5)
-            .collect(Collectors.toList());
-
-        return limited;
+        return result;
     }
 
-    // ---------- helpers ----------
+    private List<WeatherDto> filterTodayUpcomingLimit(List<WeatherDto> all, int limit) {
+        all.sort(Comparator.comparing(WeatherDto::getForecastAt));
+        LocalDate today = LocalDate.now(SEOUL);
+        Instant now = Instant.now();
+        return all.stream()
+            .filter(dto -> dto.getForecastAt().atZone(SEOUL).toLocalDate().equals(today))
+            .filter(dto -> !dto.getForecastAt().isBefore(now))
+            .limit(limit)
+            .collect(Collectors.toList());
+    }
+
+    private record FetchResult(String baseDate, String baseTime, List<WeatherApiResponse.Item> items) {
+    }
+
+    private record ComparisonIndex(Map<String, Double> tmpByKey,
+                                   Map<String, Double> rehByKey,
+                                   Map<String, Double> tmpPrevByKey,
+                                   Map<String, Double> rehPrevByKey) {
+    }
+
+    private record DailyExtrema(Map<String, Double> minByDay, Map<String, Double> maxByDay) {
+    }
+
+    private String minusHoursKey(String ymdHm, int hours) {
+        LocalDate date = LocalDate.parse(ymdHm.substring(0, 8), DATE);
+        LocalTime time = LocalTime.parse(ymdHm.substring(8, 12), TIME);
+        ZonedDateTime zdt = ZonedDateTime.of(date, time, SEOUL).minusHours(hours);
+        return zdt.format(DATE) + zdt.format(TIME);
+    }
+
+    private <T> T firstNonNull(T a, T b) {
+        return (a != null) ? a : b;
+    }
+
     private boolean notBlank(String s) {
         return s != null && !s.isBlank();
     }
@@ -250,5 +389,9 @@ public class WeatherReadServiceImpl implements WeatherReadService {
             return WindWord.MODERATE;
         }
         return WindWord.STRONG;
+    }
+
+    private Double round1(Double v) {
+        return (v == null) ? null : Math.round(v * 10d) / 10d;
     }
 }
