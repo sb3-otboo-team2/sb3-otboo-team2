@@ -6,6 +6,7 @@ import lombok.Getter;
 public enum ErrorCode {
     // 사용자
     DUPLICATE_USER("이미 존재하는 사용자입니다."),
+    USER_NOT_FOUND("사용자를 찾을 수 없습니다."),
 
     // NULL 검증
     REQUIRED_FIELD_MISSING("필수 필드 값이 누락되었습니다"),
