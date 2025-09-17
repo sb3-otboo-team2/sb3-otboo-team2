@@ -1,13 +1,20 @@
 package org.ikuzo.otboo.domain.clothes.service.impl;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ikuzo.otboo.domain.clothes.dto.request.ClothesAttributeDefCreateRequest;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesAttributeDefDto;
+import org.ikuzo.otboo.domain.clothes.dto.request.ClothesAttributeDefCreateRequest;
+import org.ikuzo.otboo.domain.clothes.dto.request.ClothesAttributeDefUpdateRequest;
 import org.ikuzo.otboo.domain.clothes.entity.AttributeOption;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
+import org.ikuzo.otboo.domain.clothes.exception.AttributeDefinitionNotFoundException;
 import org.ikuzo.otboo.domain.clothes.exception.DuplicatedAttributeNameException;
+import org.ikuzo.otboo.domain.clothes.exception.MissingRequiredFieldException;
 import org.ikuzo.otboo.domain.clothes.mapper.ClothesAttributeDefMapper;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothesAttributeDefService;
@@ -23,13 +30,13 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     private final ClothesAttributeDefRepository clothesAttributeDefRepository;
     private final ClothesAttributeDefMapper mapper;
 
-//    @PreAuthorize("hasRole('ADMIN')")
+    //    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
     public ClothesAttributeDefDto create(ClothesAttributeDefCreateRequest request) {
 
-        String name = request.name();
-        List<String> selectableValues = request.selectableValues();
+        String name = normalizeNameOrThrow(request.name());
+        List<String> selectableValues = normalizeValuesOrThrow(request.selectableValues());
 
         log.info("[Service] 속성 등록 시작 - name: {}, selectableValues: {}", name, selectableValues);
 
@@ -41,28 +48,80 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
             .name(name)
             .build();
 
-        if (selectableValues != null) {
-            selectableValues.stream()
-                .map(value -> value == null ? null : value.trim())
-                .filter(value -> value != null && !value.isEmpty())
-                .distinct()
-                .map(value -> AttributeOption.builder()
-                    .value(value)
-                    .definition(clothesAttributeDef)
-                    .build())
-                .forEach(clothesAttributeDef.getOptions()::add);
-        }
-
-        ClothesAttributeDef savedClothesAttributeDef;
+        attachOptions(clothesAttributeDef, selectableValues);
 
         try {
-            savedClothesAttributeDef = clothesAttributeDefRepository.save(clothesAttributeDef);
+            ClothesAttributeDef saved = clothesAttributeDefRepository.save(clothesAttributeDef);
+            log.info("[Service] 속성 등록 완료 - id: {}, name: {}", saved.getId(), saved.getName());
+            return mapper.toDto(saved);
         } catch (DataIntegrityViolationException e) {
             throw new DuplicatedAttributeNameException(name);
         }
 
-        log.info("[Service] 속성 등록 시작 - name: {}, selectableValues: {}", name, selectableValues);
+    }
 
-        return mapper.toDto(savedClothesAttributeDef);
+    @Transactional
+    @Override
+    public ClothesAttributeDefDto update(UUID definitionId,
+        ClothesAttributeDefUpdateRequest request) {
+
+        String newName = normalizeNameOrThrow(request.name());
+        List<String> selectableValues = normalizeValuesOrThrow(request.selectableValues());
+
+        log.info("[Service] 속성 수정 시작 - name: {}, selectableValues: {}", newName, selectableValues);
+
+        ClothesAttributeDef def = clothesAttributeDefRepository.findById(definitionId)
+            .orElseThrow(() -> new AttributeDefinitionNotFoundException(definitionId));
+
+        if (!newName.equals(def.getName()) && clothesAttributeDefRepository.existsByName(newName)) {
+            throw new DuplicatedAttributeNameException(newName);
+        }
+
+        def.update(newName, selectableValues);
+        try {
+            ClothesAttributeDef saved = clothesAttributeDefRepository.save(def);
+            log.info("[Service] 속성 수정 완료 - id: {}, name: {}", saved.getId(), saved.getName());
+            return mapper.toDto(saved);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicatedAttributeNameException(newName);
+        }
+    }
+
+    private String normalizeNameOrThrow(String rawName) {
+        String name = rawName == null ? null : rawName.trim();
+        if (name == null || name.isEmpty()) {
+            throw new MissingRequiredFieldException("name is null or blank");
+        }
+        return name;
+    }
+
+    private List<String> normalizeValuesOrThrow(List<String> rawValues) {
+        if (rawValues == null) {
+            throw new MissingRequiredFieldException("selectableValues is null");
+        }
+        Set<String> set = new LinkedHashSet<>();
+        for (String v : rawValues) {
+            if (v == null) {
+                continue;
+            }
+            String t = v.trim();
+            if (!t.isEmpty()) {
+                set.add(t);
+            }
+        }
+        if (set.isEmpty()) {
+            throw new MissingRequiredFieldException(
+                "selectableValues is empty after normalization");
+        }
+        return new ArrayList<>(set);
+    }
+
+    private void attachOptions(ClothesAttributeDef def, List<String> values) {
+        values.forEach(v ->
+            def.getOptions().add(AttributeOption.builder()
+                .value(v)
+                .definition(def)
+                .build())
+        );
     }
 }

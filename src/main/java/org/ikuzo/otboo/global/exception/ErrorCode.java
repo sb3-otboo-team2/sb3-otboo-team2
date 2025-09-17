@@ -6,6 +6,7 @@ import lombok.Getter;
 public enum ErrorCode {
     // 사용자
     DUPLICATE_USER("이미 존재하는 사용자입니다."),
+    USER_NOT_FOUND("사용자를 찾을 수 없습니다."),
     USER_LOCATION_MISSING("사용자 위도/경도 정보가 없습니다."),
 
     // NULL 검증
@@ -13,6 +14,8 @@ public enum ErrorCode {
 
     // 의상
     CLOTHES_NOT_FOUND("존재하지 않는 의상입니다"),
+    CLOTHING_MAPPER_CONVERSION_FAILED("Clothes -> ClothesDto로의 변환에 실패하였습니다"),
+
 
     // 의상 속성
     DUPLICATED_ATTRIBUTE_NAME("이미 존재하는 속성 이름입니다"),
