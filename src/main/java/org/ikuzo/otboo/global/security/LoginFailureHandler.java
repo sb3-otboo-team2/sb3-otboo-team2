@@ -30,7 +30,7 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
 
-        ErrorResponse errorResponse = createErrorResponse(exception);
+        ErrorResponse errorResponse = new ErrorResponse(exception);
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 

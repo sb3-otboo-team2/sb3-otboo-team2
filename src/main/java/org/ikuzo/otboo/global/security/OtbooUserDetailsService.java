@@ -24,7 +24,7 @@ public class OtbooUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> UserNotFoundException.withEmail(email));
+            .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
         UserDto userDto = userMapper.toDto(user);
 
         return new OtbooUserDetails(
