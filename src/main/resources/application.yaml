@@ -2,3 +2,9 @@ spring:
   profiles:
     active:
       - local
+
+otboo:
+  jwt:
+    access-token:
+      secret: ${JWT_ACCESS_SECRET:your-access-token-secret-key-here-make-it-long-and-random}
+      expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000} # 60 minutes
