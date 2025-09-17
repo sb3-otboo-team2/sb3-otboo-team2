@@ -7,12 +7,14 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.weather.client.KakaoLocalClient;
@@ -149,11 +151,25 @@ public class WeatherReadServiceImpl implements WeatherReadService {
                 .windSpeed(WindSpeedDto.builder()
                     .speed(wsd).asWord(windWord).build())
                 .build());
+
+
         }
 
         log.info("[WeatherReadService] 날씨 조회 완료: 좌표({}, {}), 예보 {}건", latitude, longitude, items.size());
+        // 시간 오름차순 정렬
+        result.sort(Comparator.comparing(WeatherDto::getForecastAt));
 
-        return result;
+        // 오늘(Asia/Seoul) 기준, 현재 시각 이후의 슬롯만 최대 5개
+        LocalDate today = LocalDate.now(SEOUL);
+        Instant now = Instant.now();
+
+        List<WeatherDto> limited = result.stream()
+            .filter(dto -> dto.getForecastAt().atZone(SEOUL).toLocalDate().equals(today))
+            .filter(dto -> !dto.getForecastAt().isBefore(now))
+            .limit(5)
+            .collect(Collectors.toList());
+
+        return limited;
     }
 
     // ---------- helpers ----------
