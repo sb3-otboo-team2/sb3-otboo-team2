@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -22,10 +23,23 @@ public class WeatherApiClient {
 
     private final WeatherApiProperties props;
 
+    private volatile WebClient webClient;
+
     private WebClient client() {
-        return WebClient.builder()
-            .baseUrl(props.getBaseUrl())
-            .build();
+        if (webClient == null) {
+            synchronized (this) {
+                if (webClient == null) {
+                    ExchangeStrategies strategies = ExchangeStrategies.builder()
+                        .codecs(c -> c.defaultCodecs().maxInMemorySize(2 * 1024 * 1024)) // 2MB
+                        .build();
+                    webClient = WebClient.builder()
+                        .baseUrl(props.getBaseUrl())
+                        .exchangeStrategies(strategies)
+                        .build();
+                }
+            }
+        }
+        return webClient;
     }
 
     /**
