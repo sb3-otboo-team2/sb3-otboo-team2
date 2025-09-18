@@ -3,6 +3,7 @@ package org.ikuzo.otboo.domain.clothes.service.impl;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,8 @@ import org.ikuzo.otboo.domain.clothes.dto.request.ClothesAttributeDefCreateReque
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesAttributeDefUpdateRequest;
 import org.ikuzo.otboo.domain.clothes.entity.AttributeOption;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
+import org.ikuzo.otboo.domain.clothes.enums.AttributeDefSortBy;
+import org.ikuzo.otboo.domain.clothes.enums.AttributeDefSortDirection;
 import org.ikuzo.otboo.domain.clothes.exception.AttributeDefinitionNotFoundException;
 import org.ikuzo.otboo.domain.clothes.exception.DuplicatedAttributeNameException;
 import org.ikuzo.otboo.domain.clothes.exception.MissingRequiredFieldException;
@@ -30,6 +33,46 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
     private final ClothesAttributeDefRepository clothesAttributeDefRepository;
     private final ClothesAttributeDefMapper mapper;
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
+    @Override
+    public List<ClothesAttributeDefDto> getWithCursor(
+        String cursor,
+        UUID idAfter,
+        int limit,
+        AttributeDefSortBy sortBy,
+        AttributeDefSortDirection sortDirection,
+        String keywordLike
+    ) {
+        log.info("[Service] 속성 목록 조회 시작 - sortBy: {}, sortDirection: {}, keywordLike: {}",
+            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" :  keywordLike);
+
+        String normalizeKeyword = normalizeKeyword(keywordLike);
+
+        List<ClothesAttributeDef> result = clothesAttributeDefRepository.findAttributeDefWithCursor(
+            cursor, idAfter, limit, sortBy, sortDirection, normalizeKeyword
+        );
+
+        boolean hasNext = result.size() > limit;
+        List<ClothesAttributeDef> content = hasNext ? result.subList(0, limit) : result;
+
+        Object nextCursor = null;
+        UUID nextIdAfter = null;
+        if (hasNext && !content.isEmpty()) {
+            ClothesAttributeDef last = content.get(content.size() - 1);
+            nextCursor =
+                (sortBy == AttributeDefSortBy.createdAt) ? last.getCreatedAt() : last.getName();
+            nextIdAfter = last.getId();
+        }
+
+        log.info("[Service] 속성 목록 조회 시작 - sortBy: {}, sortDirection: {}, keywordLike: {}",
+            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" :  keywordLike);
+
+        return content.stream()
+            .map(mapper::toDto)
+            .toList();
+    }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
@@ -102,6 +145,14 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         clothesAttributeDefRepository.delete(def);
 
         log.info("[Service] 속성 삭제 완료 - definitionId: {}", definitionId);
+    }
+
+    private String normalizeKeyword(String kw) {
+        if (kw == null) {
+            return null;
+        }
+        kw = kw.trim();
+        return kw.isEmpty() ? null : kw;
     }
 
     private String normalizeNameOrThrow(String rawName) {

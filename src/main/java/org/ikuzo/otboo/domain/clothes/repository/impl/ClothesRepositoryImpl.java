@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.domain.clothes.repository;
+package org.ikuzo.otboo.domain.clothes.repository.impl;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -9,8 +9,9 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.clothes.entity.Clothes;
-import org.ikuzo.otboo.domain.clothes.entity.ClothesType;
+import org.ikuzo.otboo.domain.clothes.enums.ClothesType;
 import org.ikuzo.otboo.domain.clothes.entity.QClothes;
+import org.ikuzo.otboo.domain.clothes.repository.ClothesRepositoryCustom;
 import org.springframework.stereotype.Repository;
 
 @Slf4j
