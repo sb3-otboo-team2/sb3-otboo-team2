@@ -23,6 +23,7 @@ import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothesService;
 import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.util.ImageSwapHelper;
@@ -92,8 +93,7 @@ public class ClothesServiceImpl implements ClothesService {
         validateClothesCreateRequest(request);
 
         User owner = userRepository.findById(request.ownerId())
-            .orElseThrow(() -> new RuntimeException("존재하지 않는 사용자입니다"));
-
+            .orElseThrow(UserNotFoundException::new);
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
             imageUrl = imageSwapHelper.swapImageSafely("clothes", image, null, owner.getId());

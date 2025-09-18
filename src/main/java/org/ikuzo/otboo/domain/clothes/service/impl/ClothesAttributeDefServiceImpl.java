@@ -19,6 +19,7 @@ import org.ikuzo.otboo.domain.clothes.mapper.ClothesAttributeDefMapper;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothesAttributeDefService;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +31,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     private final ClothesAttributeDefRepository clothesAttributeDefRepository;
     private final ClothesAttributeDefMapper mapper;
 
-    //    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
     public ClothesAttributeDefDto create(ClothesAttributeDefCreateRequest request) {
@@ -60,6 +61,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
     public ClothesAttributeDefDto update(UUID definitionId,
@@ -85,6 +87,21 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         } catch (DataIntegrityViolationException e) {
             throw new DuplicatedAttributeNameException(newName);
         }
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    @Override
+    public void delete(UUID definitionId) {
+
+        log.info("[Service] 속성 삭제 시작 - definitionId: {}", definitionId);
+
+        ClothesAttributeDef def = clothesAttributeDefRepository.findById(definitionId)
+            .orElseThrow(() -> new AttributeDefinitionNotFoundException(definitionId));
+
+        clothesAttributeDefRepository.delete(def);
+
+        log.info("[Service] 속성 삭제 완료 - definitionId: {}", definitionId);
     }
 
     private String normalizeNameOrThrow(String rawName) {

@@ -11,6 +11,7 @@ import org.ikuzo.otboo.domain.clothes.dto.request.ClothesAttributeDefUpdateReque
 import org.ikuzo.otboo.domain.clothes.service.ClothesAttributeDefService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -53,5 +54,19 @@ public class ClothesAttributeDefController implements ClothesAttributeDefApi {
         log.info("[Controller] 속성 수정 완료 - name: {}", dto.name());
 
         return ResponseEntity.status(HttpStatus.OK).body(dto);
+    }
+
+    @DeleteMapping("/{definitionId}")
+    @Override
+    public ResponseEntity<Void> delete(
+        @PathVariable UUID definitionId
+    ) {
+        log.info("[Controller] 속성 삭제 요청 - definitionId: {}", definitionId);
+
+        clothesAttributeDefService.delete(definitionId);
+
+        log.info("[Controller] 속성 삭제 완료 - definitionId: {}", definitionId);
+
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }
