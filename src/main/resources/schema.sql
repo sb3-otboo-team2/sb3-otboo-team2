@@ -71,13 +71,13 @@ DROP TABLE IF EXISTS "notifications" CASCADE;
 CREATE TABLE "notifications"
 (
     "id"         UUID         NOT NULL,
-    "user_id"    UUID         NOT NULL,
+    "receiver_id" UUID         NOT NULL,
     "title"      VARCHAR(100) NOT NULL,
     "content"    VARCHAR(100) NOT NULL,
     "level"      VARCHAR(10)  NOT NULL,
     "created_at" TIMESTAMPTZ  NOT NULL,
     CONSTRAINT "PK_NOTIFICATIONS" PRIMARY KEY ("id"),
-    CONSTRAINT "FK_NOTIFICATIONS_USERS" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE,
+    CONSTRAINT "FK_NOTIFICATIONS_RECEIVER" FOREIGN KEY ("receiver_id") REFERENCES "users" ("id") ON DELETE CASCADE,
     CONSTRAINT "CHK_NOTIFICATIONS_LEVEL" CHECK ("level" IN ('INFO', 'WARNING', 'ERROR'))
 );
 
