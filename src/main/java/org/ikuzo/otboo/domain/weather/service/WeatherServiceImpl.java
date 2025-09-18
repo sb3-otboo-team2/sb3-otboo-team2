@@ -83,7 +83,7 @@ public class WeatherServiceImpl implements WeatherService {
             throw UserLocationMissingException.withUserId(userId);
         }
 
-        XY xy = KmaGridConverter.toXY(user.getLongitude(), user.getLatitude());
+        XY xy = KmaGridConverter.toXY(user.getLatitude(), user.getLongitude());
 
         // 기상청 baseDate/baseTime 계산
         Instant now = Instant.now();

@@ -55,7 +55,7 @@ public class WeatherReadServiceImpl implements WeatherReadService {
     @Override
     @Transactional(readOnly = true)
     public WeatherAPILocation getLocation(double latitude, double longitude) {
-        XY xy = KmaGridConverter.toXY(longitude, latitude);
+        XY xy = KmaGridConverter.toXY(latitude, longitude);
         log.debug("[WeatherReadService] 좌표 변환 시작: lat={}, lon={} → grid=({}, {})", latitude, longitude, xy.x(), xy.y());
 
         KakaoRegionResponse kakao = kakaoLocalClient.coord2region(latitude, longitude);
@@ -89,7 +89,7 @@ public class WeatherReadServiceImpl implements WeatherReadService {
     @Transactional(readOnly = true)
     public List<WeatherDto> getWeatherByCoordinates(double latitude, double longitude) {
         log.debug("[WeatherReadService] 날씨 조회 시작: lat={}, lon={}", latitude, longitude);
-        XY xy = KmaGridConverter.toXY(longitude, latitude);
+        XY xy = KmaGridConverter.toXY(latitude, longitude);
 
         // 오늘 기준 예보 수집
         FetchResult today = fetchForecastItems(Instant.now(), xy.x(), xy.y());

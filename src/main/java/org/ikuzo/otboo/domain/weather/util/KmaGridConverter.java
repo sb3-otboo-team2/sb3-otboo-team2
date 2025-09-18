@@ -17,7 +17,7 @@ public final class KmaGridConverter {
     private static final double XO = 43;         // 기준좌표 X
     private static final double YO = 136;        // 기준좌표 Y
 
-    public static XY toXY(double lon, double lat) {
+    public static XY toXY(double lat, double lon) {
         double DEGRAD = Math.PI / 180.0;
         double re = RE / GRID;
         double slat1 = SLAT1 * DEGRAD;
