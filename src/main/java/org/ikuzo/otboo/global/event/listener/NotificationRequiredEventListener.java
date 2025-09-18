@@ -19,8 +19,8 @@ public class NotificationRequiredEventListener {
 
     @TransactionalEventListener
     public void on(FollowCreatedEvent event) {
-        UUID receiverId = event.dto().followee().userId();
-        String followerName = event.dto().follower().name();
+        UUID receiverId = event.getDto().followee().userId();
+        String followerName = event.getDto().follower().name();
 
         String title = "\"" + followerName + "\"님이 나를 팔로우했어요.";
 
@@ -31,12 +31,12 @@ public class NotificationRequiredEventListener {
 
     @TransactionalEventListener
     public void on(MessageCreatedEvent event) {
-        UUID receiverId = event.dto().receiver().userId();
-        String receiverName = event.dto().receiver().name();
+        UUID receiverId = event.getDto().receiver().userId();
+        String receiverName = event.getDto().receiver().name();
 
         String title = "\"" + receiverName + "\"님이 메세지를 보냈어요.";
 
-        String content = event.dto().content();
+        String content = event.getDto().content();
 
         notificationService.create(Set.of(receiverId), title, content, Level.INFO);
     }

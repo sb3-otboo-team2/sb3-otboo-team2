@@ -4,8 +4,8 @@ import org.ikuzo.otboo.domain.follow.dto.FollowDto;
 
 import java.time.Instant;
 
-public record FollowCreatedEvent(
-    FollowDto dto,
-    Instant createdAt
-) {
+public class FollowCreatedEvent extends CreatedEvent<FollowDto> {
+    public FollowCreatedEvent(FollowDto data, Instant createdAt) {
+        super(data, createdAt);
+    }
 }

@@ -20,12 +20,12 @@ public class WebsocketRequiredEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendMessage(MessageCreatedEvent messageCreatedEvent) {
-        UUID senderId = messageCreatedEvent.dto().sender().userId();
-        UUID receiverId = messageCreatedEvent.dto().receiver().userId();
+        UUID senderId = messageCreatedEvent.getDto().sender().userId();
+        UUID receiverId = messageCreatedEvent.getDto().receiver().userId();
 
         String dmKey = buildDmKey(senderId, receiverId);
 
-        messagingTemplate.convertAndSend("/sub/direct-messages_" + dmKey, messageCreatedEvent.dto());
+        messagingTemplate.convertAndSend("/sub/direct-messages_" + dmKey, messageCreatedEvent.getDto());
     }
 
     public String buildDmKey(UUID userId1, UUID userId2) {

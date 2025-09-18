@@ -19,7 +19,7 @@ public class SseRequiredEventListener {
 
     @TransactionalEventListener
     public void on(NotificationCreatedEvent event) {
-        List<NotificationDto> notifications = event.dto();
+        List<NotificationDto> notifications = event.getDto();
 
         notifications.forEach(notification -> {
             UUID receiverId = notification.receiverId();
