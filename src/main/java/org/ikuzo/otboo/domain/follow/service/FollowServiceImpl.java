@@ -12,6 +12,7 @@ import org.ikuzo.otboo.domain.follow.mapper.FollowMapper;
 import org.ikuzo.otboo.domain.follow.repository.FollowRepository;
 import org.ikuzo.otboo.domain.user.dto.UserSummary;
 import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.domain.follow.exception.FollowAlreadyException;
@@ -62,8 +63,8 @@ public class FollowServiceImpl implements FollowService {
             throw FollowAlreadyException.alreadyException(followerId);
         }
 
-        User follower = userRepository.findById(followerId).orElseThrow(() -> new EntityNotFoundException("팔로워를 찾을 수 없음"));
-        User followee = userRepository.findById(followeeId).orElseThrow(() -> new EntityNotFoundException("팔로이를 찾을 수 없음"));
+        User follower = userRepository.findById(followerId).orElseThrow(UserNotFoundException::new);
+        User followee = userRepository.findById(followeeId).orElseThrow(UserNotFoundException::new);
 
         Follow follow = Follow.builder()
             .follower(follower)
