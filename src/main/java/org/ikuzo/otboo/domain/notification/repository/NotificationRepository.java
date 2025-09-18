@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.domain.notification.reppsitory;
+package org.ikuzo.otboo.domain.notification.repository;
 
 import org.ikuzo.otboo.domain.notification.entity.Notification;
 import org.springframework.data.jpa.repository.JpaRepository;

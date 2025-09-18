@@ -6,7 +6,7 @@ import org.ikuzo.otboo.domain.notification.dto.NotificationDto;
 import org.ikuzo.otboo.domain.notification.entity.Level;
 import org.ikuzo.otboo.domain.notification.entity.Notification;
 import org.ikuzo.otboo.domain.notification.mapper.NotificationMapper;
-import org.ikuzo.otboo.domain.notification.reppsitory.NotificationRepository;
+import org.ikuzo.otboo.domain.notification.repository.NotificationRepository;
 import org.ikuzo.otboo.global.event.message.NotificationCreatedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
