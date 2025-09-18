@@ -102,10 +102,11 @@ public class WeatherServiceImpl implements WeatherService {
             .map(WeatherApiResponse.Items::getItem)
             .orElse(List.of());
 
-        // 동일 fcstDate+fcstTime 기준 예보 묶음 만들기 -> 가장 가까운 시각(첫 번째) 선택
+        // 동일 fcstDate+fcstTime 기준 예보 묶음 만들기
         Map<String, Map<String, String>> grouped = new LinkedHashMap<>();
         for (WeatherApiResponse.Item it : items) {
-            String key = it.getFcstDate() + it.getFcstTime();
+            // 가장 이른(fcstDate+fcstTime) 키 선택 (사전순 == 시간순)
+            String key = grouped.keySet().stream().min(String::compareTo).orElseThrow();
             grouped.computeIfAbsent(key, k -> new HashMap<>()).put(it.getCategory(), it.getFcstValue());
         }
 
