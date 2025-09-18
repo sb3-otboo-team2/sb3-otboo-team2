@@ -12,12 +12,16 @@ import org.ikuzo.otboo.domain.follow.mapper.FollowMapper;
 import org.ikuzo.otboo.domain.follow.repository.FollowRepository;
 import org.ikuzo.otboo.domain.user.dto.UserSummary;
 import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.domain.follow.exception.FollowAlreadyException;
 import org.ikuzo.otboo.domain.follow.exception.FollowSelfNotAllowException;
 import org.ikuzo.otboo.global.event.message.FollowCreatedEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,8 +66,8 @@ public class FollowServiceImpl implements FollowService {
             throw FollowAlreadyException.alreadyException(followerId);
         }
 
-        User follower = userRepository.findById(followerId).orElseThrow(() -> new EntityNotFoundException("팔로워를 찾을 수 없음"));
-        User followee = userRepository.findById(followeeId).orElseThrow(() -> new EntityNotFoundException("팔로이를 찾을 수 없음"));
+        User follower = userRepository.findById(followerId).orElseThrow(UserNotFoundException::new);
+        User followee = userRepository.findById(followeeId).orElseThrow(UserNotFoundException::new);
 
         Follow follow = Follow.builder()
             .follower(follower)
@@ -95,23 +99,20 @@ public class FollowServiceImpl implements FollowService {
     @Transactional(readOnly = true)
     public FollowSummaryDto followSummary(UUID userId) {
         log.info("[FollowService] followSummary 팔로우 요약 정보 userId: {}", userId);
-        // TODO: SpringSecurity 개발 후 securityContextHolder를 통해 접속 중인 유저 조회
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        String email = authentication.getName();
-//        userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
-
-        UUID currentUserId = UUID.randomUUID();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User currentUser = userRepository.findByEmail(email).orElseThrow(UserNotFoundException::new);
 
         long followCount = followRepository.countByFollowing_Id(userId);
         long followingCount = followRepository.countByFollower_Id(userId);
 
         // 내가 이 유저를 팔로우하는지 여부 + 팔로우 ID
-        Optional<Follow> myFollow = followRepository.findByFollower_IdAndFollowing_Id(currentUserId, userId);
+        Optional<Follow> myFollow = followRepository.findByFollower_IdAndFollowing_Id(currentUser.getId(), userId);
         boolean followedByMe = myFollow.isPresent();
         UUID followedByMeId = myFollow.map(Follow::getId).orElse(null);
 
         // 대상 사용자가 나를 팔로우하는지 여부
-        boolean followingMe = followRepository.existsByFollower_IdAndFollowing_Id(userId, currentUserId);
+        boolean followingMe = followRepository.existsByFollower_IdAndFollowing_Id(userId, currentUser.getId());
 
         return new FollowSummaryDto(
             userId,
@@ -227,14 +228,13 @@ public class FollowServiceImpl implements FollowService {
     public void cancel(UUID followId) {
         Follow follow = followRepository.findById(followId).orElseThrow(() -> FollowNotFoundException.notFoundException(followId));
 
-        // TODO: SpringSecurity 적용 후 로그인한 유저와 follow.getFollower 검증 리팩토링 예정
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        String email = authentication.getName();
-//        User user = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
-//
-//        if (!follow.getFollower().getId().equals(user.getId())) {
-//            throw new AuthorizationDeniedException("팔로우를 취소할 권한이 없습니다.");
-//        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+
+        if (!follow.getFollower().getId().equals(user.getId())) {
+            throw new AuthorizationDeniedException("팔로우를 취소할 권한이 없습니다.");
+        }
 
         followRepository.delete(follow);
         log.info("[FollowService] 팔로우 취소 완료");
