@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesAttributeDto;
-import org.ikuzo.otboo.domain.clothes.entity.ClothesType;
+import org.ikuzo.otboo.domain.clothes.enums.ClothesType;
 
 public record ClothesCreateRequest(
 

@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.domain.clothes.entity;
+package org.ikuzo.otboo.domain.clothes.enums;
 
 public enum ClothesType {
     TOP,
