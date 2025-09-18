@@ -1,0 +1,30 @@
+package org.ikuzo.otboo.global.event.listener;
+
+import lombok.RequiredArgsConstructor;
+import org.ikuzo.otboo.domain.notification.entity.Level;
+import org.ikuzo.otboo.domain.notification.service.NotificationService;
+import org.ikuzo.otboo.global.event.message.FollowCreatedEvent;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionalEventListener;
+
+import java.util.Set;
+import java.util.UUID;
+
+@Component
+@RequiredArgsConstructor
+public class NotificationRequiredEventListener {
+
+    private final NotificationService notificationService;
+
+    @TransactionalEventListener
+    public void on(FollowCreatedEvent event) {
+        UUID receiverId = event.dto().followee().userId();
+        String followerName = event.dto().follower().name();
+
+        String title = "\"" + followerName + "\"님이 나를 팔로우했어요.";
+
+        String content = "";
+
+        notificationService.create(Set.of(receiverId), title, content, Level.INFO);
+    }
+}

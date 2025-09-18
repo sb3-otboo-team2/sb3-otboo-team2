@@ -16,6 +16,8 @@ import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.domain.follow.exception.FollowAlreadyException;
 import org.ikuzo.otboo.domain.follow.exception.FollowSelfNotAllowException;
+import org.ikuzo.otboo.global.event.message.FollowCreatedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class FollowServiceImpl implements FollowService {
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
     private final FollowMapper followMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     /**
@@ -71,7 +74,15 @@ public class FollowServiceImpl implements FollowService {
         UserSummary followerSummary = new UserSummary(follower.getId(), follower.getName(), follower.getProfileImageUrl());
         UserSummary followeeSummary = new UserSummary(followee.getId(), followee.getName(), followee.getProfileImageUrl());
 
-        return followMapper.toDto(savedFollow, followeeSummary, followerSummary);
+        FollowDto dto = followMapper.toDto(savedFollow, followeeSummary, followerSummary);
+
+        eventPublisher.publishEvent(
+            new FollowCreatedEvent(
+                dto,
+                Instant.now()
+            )
+        );
+        return dto;
     }
 
     /**
