@@ -26,7 +26,7 @@ public class KakaoLocalClient {
             .build();
     }
 
-    public KakaoRegionResponse coord2region(double lon, double lat) {
+    public KakaoRegionResponse coord2region(double lat, double lon) {
         return client()
             .get()
             .uri(uriBuilder -> uriBuilder.path("/v2/local/geo/coord2regioncode.json")

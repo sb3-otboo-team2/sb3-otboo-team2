@@ -58,7 +58,7 @@ public class WeatherReadServiceImpl implements WeatherReadService {
         XY xy = KmaGridConverter.toXY(longitude, latitude);
         log.debug("[WeatherReadService] 좌표 변환 시작: lat={}, lon={} → grid=({}, {})", latitude, longitude, xy.x(), xy.y());
 
-        KakaoRegionResponse kakao = kakaoLocalClient.coord2region(longitude, latitude);
+        KakaoRegionResponse kakao = kakaoLocalClient.coord2region(latitude, longitude);
         List<String> names = new ArrayList<>();
         if (kakao != null && kakao.documents() != null && !kakao.documents().isEmpty()) {
             var d = kakao.documents().get(0);

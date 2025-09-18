@@ -53,7 +53,7 @@ public class WeatherServiceImpl implements WeatherService {
     @Transactional(readOnly = true)
     @Override
     public RegionInfoDto reverseGeocode(double latitude, double longitude) {
-        KakaoRegionResponse res = kakaoLocalClient.coord2region(longitude, latitude);
+        KakaoRegionResponse res = kakaoLocalClient.coord2region(latitude, longitude);
         if (res.documents() == null || res.documents().isEmpty()) {
             return RegionInfoDto.builder().addressName("UNKNOWN").x(longitude).y(latitude).build();
         }
