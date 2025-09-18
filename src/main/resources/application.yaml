@@ -11,3 +11,17 @@ otboo:
 sse:
   timeout: 300_000
   event-queue-capacity: 100
+
+external:
+  kma:
+    base-url: "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0"
+    service-key: "${KMA_SERVICE_KEY_ENC}"
+    timeout-ms: 5000
+  kakao:
+    base-url: "https://dapi.kakao.com"
+    rest-api-key: "${API_KAKAO_KEY}"
+
+weather:
+  batch:
+    enabled: true
+    cron: "0 0/30 * * * *"
