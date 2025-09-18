@@ -121,6 +121,11 @@ public class WeatherServiceImpl implements WeatherService {
         String firstKey = grouped.keySet().iterator().next();
         Map<String, String> cat = grouped.get(firstKey);
 
+        if (!cat.containsKey("TMP") || !cat.containsKey("POP") || !cat.containsKey("SKY") || !cat.containsKey("PTY")) {
+            log.warn("[WeatherService] 사용자 {}: 필수 카테고리 누락 (keys={})", userId, cat.keySet());
+            throw WeatherNoForecastException.withBaseAndGrid(baseDate, baseTime, xy.x(), xy.y());
+        }
+
         // 매핑
         Weather w = mapForecastToEntity(user, baseDate, baseTime, firstKey.substring(0, 8), firstKey.substring(8, 12),
             cat);
