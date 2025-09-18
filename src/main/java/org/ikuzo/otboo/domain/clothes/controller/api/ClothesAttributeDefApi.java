@@ -7,8 +7,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import java.util.List;
 import java.util.UUID;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesAttributeDefDto;
@@ -47,10 +45,7 @@ public interface ClothesAttributeDefApi {
     ResponseEntity<List<ClothesAttributeDefDto>> getWithCursor(
         @RequestParam AttributeDefSortBy sortBy,
         @RequestParam AttributeDefSortDirection sortDirection,
-        @RequestParam(required = false) String keywordLike,
-        @RequestParam(required = false) String cursor,
-        @RequestParam(required = false) UUID idAfter,
-        @RequestParam(defaultValue = "40") @Min(1) @Max(100) int limit
+        @RequestParam(required = false, defaultValue = "") String keywordLike
     );
 
     @Operation(summary = "의상 속성 정의 등록")

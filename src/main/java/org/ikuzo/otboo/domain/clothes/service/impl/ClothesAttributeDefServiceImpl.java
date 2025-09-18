@@ -38,38 +38,23 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     @Transactional(readOnly = true)
     @Override
     public List<ClothesAttributeDefDto> getWithCursor(
-        String cursor,
-        UUID idAfter,
-        int limit,
         AttributeDefSortBy sortBy,
         AttributeDefSortDirection sortDirection,
         String keywordLike
     ) {
         log.info("[Service] 속성 목록 조회 시작 - sortBy: {}, sortDirection: {}, keywordLike: {}",
-            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" :  keywordLike);
+            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" : keywordLike);
 
         String normalizeKeyword = normalizeKeyword(keywordLike);
 
-        List<ClothesAttributeDef> result = clothesAttributeDefRepository.findAttributeDefWithCursor(
-            cursor, idAfter, limit, sortBy, sortDirection, normalizeKeyword
+        List<ClothesAttributeDef> data = clothesAttributeDefRepository.findAttributeDefWithCursor(
+            sortBy, sortDirection, normalizeKeyword
         );
 
-        boolean hasNext = result.size() > limit;
-        List<ClothesAttributeDef> content = hasNext ? result.subList(0, limit) : result;
+        log.info("[Service] 속성 목록 조회 완료 - sortBy: {}, sortDirection: {}, keywordLike: {}",
+            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" : keywordLike);
 
-        Object nextCursor = null;
-        UUID nextIdAfter = null;
-        if (hasNext && !content.isEmpty()) {
-            ClothesAttributeDef last = content.get(content.size() - 1);
-            nextCursor =
-                (sortBy == AttributeDefSortBy.createdAt) ? last.getCreatedAt() : last.getName();
-            nextIdAfter = last.getId();
-        }
-
-        log.info("[Service] 속성 목록 조회 시작 - sortBy: {}, sortDirection: {}, keywordLike: {}",
-            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" :  keywordLike);
-
-        return content.stream()
+        return data.stream()
             .map(mapper::toDto)
             .toList();
     }

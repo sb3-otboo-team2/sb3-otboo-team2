@@ -17,9 +17,6 @@ public interface ClothesAttributeDefService {
     void delete(UUID definitionId);
 
     List<ClothesAttributeDefDto> getWithCursor(
-        String cursor,
-        UUID idAfter,
-        int limit,
         AttributeDefSortBy sortBy,
         AttributeDefSortDirection sortDirection,
         String keywordLike

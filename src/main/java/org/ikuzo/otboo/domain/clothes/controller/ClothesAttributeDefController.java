@@ -1,8 +1,6 @@
 package org.ikuzo.otboo.domain.clothes.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -40,20 +38,17 @@ public class ClothesAttributeDefController implements ClothesAttributeDefApi {
     public ResponseEntity<List<ClothesAttributeDefDto>> getWithCursor(
         @RequestParam AttributeDefSortBy sortBy,
         @RequestParam AttributeDefSortDirection sortDirection,
-        @RequestParam(required = false, defaultValue = "") String keywordLike,
-        @RequestParam(required = false) String cursor,
-        @RequestParam(required = false) UUID idAfter,
-        @RequestParam(defaultValue = "40") @Min(1) @Max(100) int limit
+        @RequestParam(required = false, defaultValue = "") String keywordLike
     ) {
         log.info("[Controller] 속성 목록 조회 요청 - sortBy: {}, sortDirection: {}, keywordLike: {}",
-            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" :  keywordLike);
+            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" : keywordLike);
 
         List<ClothesAttributeDefDto> response = clothesAttributeDefService.getWithCursor(
-            cursor, idAfter, limit, sortBy, sortDirection, keywordLike
+            sortBy, sortDirection, keywordLike
         );
 
         log.info("[Controller] 속성 목록 조회 완료 - sortBy: {}, sortDirection: {}, keywordLike: {}",
-            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" :  keywordLike);
+            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" : keywordLike);
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
