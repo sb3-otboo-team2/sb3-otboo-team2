@@ -43,7 +43,7 @@ public interface ClothesAttributeDefApi {
             )
         )
     })
-    ResponseEntity<List<ClothesAttributeDefDto>> getWithCursor(
+    ResponseEntity<List<ClothesAttributeDefDto>> getList(
         @RequestParam AttributeDefSortBy sortBy,
         @RequestParam AttributeDefSortDirection sortDirection,
         @RequestParam(required = false, defaultValue = "") String keywordLike

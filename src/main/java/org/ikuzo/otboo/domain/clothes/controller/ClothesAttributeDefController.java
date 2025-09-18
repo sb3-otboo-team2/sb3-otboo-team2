@@ -35,7 +35,7 @@ public class ClothesAttributeDefController implements ClothesAttributeDefApi {
 
     @GetMapping
     @Override
-    public ResponseEntity<List<ClothesAttributeDefDto>> getWithCursor(
+    public ResponseEntity<List<ClothesAttributeDefDto>> getList(
         @RequestParam AttributeDefSortBy sortBy,
         @RequestParam AttributeDefSortDirection sortDirection,
         @RequestParam(required = false, defaultValue = "") String keywordLike
@@ -43,7 +43,7 @@ public class ClothesAttributeDefController implements ClothesAttributeDefApi {
         log.info("[Controller] 속성 목록 조회 요청 - sortBy: {}, sortDirection: {}, keywordLike: {}",
             sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" : keywordLike);
 
-        List<ClothesAttributeDefDto> response = clothesAttributeDefService.getWithCursor(
+        List<ClothesAttributeDefDto> response = clothesAttributeDefService.getList(
             sortBy, sortDirection, keywordLike
         );
 

@@ -37,7 +37,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
     @Override
-    public List<ClothesAttributeDefDto> getWithCursor(
+    public List<ClothesAttributeDefDto> getList(
         AttributeDefSortBy sortBy,
         AttributeDefSortDirection sortDirection,
         String keywordLike
