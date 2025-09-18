@@ -1,6 +1,7 @@
 package org.ikuzo.otboo.domain.clothes.controller.api;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,7 +31,7 @@ public interface ClothesAttributeDefApi {
             description = "의상 속성 정의 목록 조회 성공",
             content = @Content(
                 mediaType = "*/*",
-                schema = @Schema(implementation = ClothesAttributeDefDto.class)
+                array = @ArraySchema(schema = @Schema(implementation = ClothesAttributeDefDto.class))
             )
         ),
         @ApiResponse(

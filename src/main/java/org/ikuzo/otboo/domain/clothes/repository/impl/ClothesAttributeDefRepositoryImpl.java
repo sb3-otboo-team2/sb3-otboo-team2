@@ -32,9 +32,7 @@ public class ClothesAttributeDefRepositoryImpl implements ClothesAttributeDefRep
 
         return queryFactory
             .selectFrom(d)
-            .where(
-                likeKeyword(d, keywordLike)
-            )
+            .where(likeKeyword(d, keywordLike))
             .orderBy(orderBy(d, sortBy, asc))
             .fetch();
     }
