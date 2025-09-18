@@ -32,9 +32,9 @@ public class NotificationRequiredEventListener {
     @TransactionalEventListener
     public void on(MessageCreatedEvent event) {
         UUID receiverId = event.getDto().receiver().userId();
-        String receiverName = event.getDto().receiver().name();
+        String senderName = event.getDto().sender().name();
 
-        String title = "\"" + receiverName + "\"님이 메세지를 보냈어요.";
+        String title = "\"" + senderName + "\"님이 메세지를 보냈어요.";
 
         String content = event.getDto().content();
 
