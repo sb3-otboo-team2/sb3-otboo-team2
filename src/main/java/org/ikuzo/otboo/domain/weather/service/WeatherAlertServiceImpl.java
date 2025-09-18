@@ -22,7 +22,8 @@ public class WeatherAlertServiceImpl implements WeatherAlertService {
     @Transactional(readOnly = true)
     @Override
     public void checkAndNotify(User user, Weather latest) {
-        Optional<Weather> prevOpt = weatherRepository.findTop1ByUserOrderByForecastAtDesc(user);
+        Optional<Weather> prevOpt = weatherRepository
+            .findTop1ByUserAndForecastAtLessThanOrderByForecastAtDesc(user, latest.getForecastAt());
         if (prevOpt.isEmpty()) {
             log.debug("[WeatherAlertService] 사용자 {}: 이전 예보 없음 → 알림 미발송", user.getId());
             return;
