@@ -4,8 +4,8 @@ import org.ikuzo.otboo.domain.directMessage.dto.DirectMessageDto;
 
 import java.time.Instant;
 
-public record MessageCreatedEvent(
-    DirectMessageDto dto,
-    Instant createdAt
-) {
+public class MessageCreatedEvent extends CreatedEvent<DirectMessageDto> {
+    public MessageCreatedEvent(DirectMessageDto data, Instant createdAt) {
+        super(data, createdAt);
+    }
 }

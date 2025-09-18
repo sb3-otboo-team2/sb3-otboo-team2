@@ -1,21 +1,23 @@
 package org.ikuzo.otboo.domain.notification.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.global.base.BaseEntity;
+
+import java.util.UUID;
 
 @Entity
 @Table(name = "notifications")
 @Getter
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder
 public class Notification extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+
+    @Column(name = "receiver_id")
+    private UUID receiverId;
 
     @Column(name = "title")
     private String title;
