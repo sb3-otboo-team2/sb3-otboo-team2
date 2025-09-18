@@ -8,6 +8,7 @@ import org.ikuzo.otboo.domain.directMessage.entity.DirectMessage;
 import org.ikuzo.otboo.domain.directMessage.mapper.DirectMessageMapper;
 import org.ikuzo.otboo.domain.directMessage.repository.DirectMessageRepository;
 import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.event.message.MessageCreatedEvent;
@@ -71,14 +72,11 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<DirectMessageDto> getDirectMessages(UUID userId, Instant cursor, UUID idAfter, int limit) {
-        // TODO: SpringSecurity 개발 후 securityContextHolder를 통해 접속 중인 유저 조회
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        String email = authentication.getName();
-//        userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User currentUser = userRepository.findByEmail(email).orElseThrow(UserNotFoundException::new);
 
-        UUID currentUserId = UUID.fromString("94728e4f-c0c6-40eb-99d1-f6bf07d2aee1");
-
-        List<DirectMessage> directMessages = directMessageRepository.getDirectMessages(currentUserId, userId, cursor, idAfter, limit);
+        List<DirectMessage> directMessages = directMessageRepository.getDirectMessages(currentUser.getId(), userId, cursor, idAfter, limit);
         List<DirectMessage> list = directMessages.size() > limit ? directMessages.subList(0, limit) : directMessages;
         boolean hasNext = directMessages.size() > limit;
         Instant nextCursor = null;
@@ -91,7 +89,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         }
         String sortBy = "createdAt";
         String sortDirection = "DESCENDING";
-        long totalCount = directMessageRepository.countDirectMessages(currentUserId, userId);
+        long totalCount = directMessageRepository.countDirectMessages(currentUser.getId(), userId);
 
         List<DirectMessageDto> content = list.stream()
             .map(directMessageMapper::toDto)
