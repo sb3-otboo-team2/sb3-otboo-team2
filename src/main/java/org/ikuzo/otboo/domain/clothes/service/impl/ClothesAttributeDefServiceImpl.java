@@ -87,6 +87,20 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         }
     }
 
+    @Transactional
+    @Override
+    public void delete(UUID definitionId) {
+
+        log.info("[Service] 속성 삭제 시작 - definitionId: {}", definitionId);
+
+        ClothesAttributeDef def = clothesAttributeDefRepository.findById(definitionId)
+            .orElseThrow(() -> new AttributeDefinitionNotFoundException(definitionId));
+
+        clothesAttributeDefRepository.delete(def);
+
+        log.info("[Service] 속성 삭제 완료 - definitionId: {}", definitionId);
+    }
+
     private String normalizeNameOrThrow(String rawName) {
         String name = rawName == null ? null : rawName.trim();
         if (name == null || name.isEmpty()) {

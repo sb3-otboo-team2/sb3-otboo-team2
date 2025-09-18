@@ -11,4 +11,5 @@ public interface ClothesAttributeDefService {
 
     ClothesAttributeDefDto update(UUID definitionId, ClothesAttributeDefUpdateRequest request);
 
+    void delete(UUID definitionId);
 }

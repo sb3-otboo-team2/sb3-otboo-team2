@@ -66,4 +66,24 @@ public interface ClothesAttributeDefApi {
         @RequestBody @Valid ClothesAttributeDefUpdateRequest request
     );
 
+    @Operation(summary = "의상 속성 정의 삭제")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "204",
+            description = "의상 속성 정의 삭제 성공",
+            content = @Content()
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "의상 속성 정의 삭제 실패",
+            content = @Content(
+                mediaType = "*/*",
+                schema = @Schema(implementation = ErrorResponse.class)
+            )
+        )
+    })
+    ResponseEntity<Void> delete(
+        @PathVariable UUID definitionId
+    );
+
 }
