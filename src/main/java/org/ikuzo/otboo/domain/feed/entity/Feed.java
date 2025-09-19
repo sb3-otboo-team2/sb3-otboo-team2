@@ -40,12 +40,15 @@ public class Feed extends BaseUpdatableEntity {
     @Column(length = 200, nullable = false)
     private String content;
 
+    @Builder.Default
     @Column(name = "comment_count", nullable = false)
     private int commentCount = 0;
 
+    @Builder.Default
     @Column(name = "like_count", nullable = false)
     private long likeCount = 0L;
 
+    @Builder.Default
     @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FeedClothes> feedClothes = new ArrayList<>();
 
