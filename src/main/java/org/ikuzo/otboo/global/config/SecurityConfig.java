@@ -35,14 +35,14 @@ public class SecurityConfig {
                 .failureHandler(loginFailureHandler)
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/auth/sign-in").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
-                .requestMatchers(request ->
-                        !request.getRequestURI().startsWith("/api/")
-                ).permitAll()
-                .anyRequest().authenticated()
-//                .anyRequest().permitAll()
+//                .requestMatchers(HttpMethod.POST, "/api/auth/sign-in").permitAll()
+//                .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
+//                .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+//                .requestMatchers(request ->
+//                        !request.getRequestURI().startsWith("/api/")
+//                ).permitAll()
+//                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
