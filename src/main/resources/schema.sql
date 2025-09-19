@@ -302,3 +302,17 @@ ALTER TABLE "attribute_options"
 -- ===============================
 ALTER TABLE "recommendation_clothes"
     ADD CONSTRAINT "UK_RECOMMENDATION_CLOTHES_PAIR" UNIQUE ("recommend_id", "clothes_id");
+
+-- ===============================
+-- CLOTHES TYPE CHECK 추가
+-- ===============================
+
+ALTER TABLE "clothes" DROP CONSTRAINT IF EXISTS "CHK_CLOTHES_TYPE";
+
+ALTER TABLE "clothes" ADD CONSTRAINT "CHK_CLOTHES_TYPE"
+    CHECK ("type" IN (
+                      'TOP','BOTTOM','DRESS','OUTER','UNDERWEAR',
+                      'ACCESSORY','SHOES','SOCKS','HAT','BAG','SCARF','ETC'
+        ));
+
+COMMIT;
