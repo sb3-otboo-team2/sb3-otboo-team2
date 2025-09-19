@@ -15,7 +15,6 @@ import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.event.message.NotificationCreatedEvent;
 import org.ikuzo.otboo.global.security.OtbooUserDetails;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.AccessDeniedException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
