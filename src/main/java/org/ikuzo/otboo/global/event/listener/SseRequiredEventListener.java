@@ -23,7 +23,7 @@ public class SseRequiredEventListener {
 
         notifications.forEach(notification -> {
             UUID receiverId = notification.receiverId();
-            sseService.send(Set.of(receiverId), "notifications.created", notification);
+            sseService.send(Set.of(receiverId), "notifications", notification);
         });
     }
 }
