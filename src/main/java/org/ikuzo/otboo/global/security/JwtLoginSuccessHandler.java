@@ -3,6 +3,7 @@ package org.ikuzo.otboo.global.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -33,6 +34,11 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
         if (authentication.getPrincipal() instanceof OtbooUserDetails userDetails) {
             try {
                 String accessToken = tokenProvider.generateAccessToken(userDetails);
+                String refreshToken = tokenProvider.generateRefreshToken(userDetails);
+
+                // Set refresh token in HttpOnly cookie
+                Cookie refreshCookie = tokenProvider.genereateRefreshTokenCookie(refreshToken);
+                response.addCookie(refreshCookie);
 
                 JwtDto jwtDto = new JwtDto(
                     userDetails.getUserDto(),
