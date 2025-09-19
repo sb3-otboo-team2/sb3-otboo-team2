@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.auth.dto.JwtInformation;
 import org.ikuzo.otboo.domain.auth.service.AuthService;
-import org.ikuzo.otboo.global.security.JwtDto;
+import org.ikuzo.otboo.domain.auth.dto.JwtDto;
 import org.ikuzo.otboo.global.security.JwtTokenProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
