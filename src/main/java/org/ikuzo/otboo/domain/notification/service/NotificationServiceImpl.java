@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.notification.dto.NotificationDto;
 import org.ikuzo.otboo.domain.notification.entity.Level;
 import org.ikuzo.otboo.domain.notification.entity.Notification;
+import org.ikuzo.otboo.domain.notification.exception.NotificationNotFoundException;
 import org.ikuzo.otboo.domain.notification.mapper.NotificationMapper;
 import org.ikuzo.otboo.domain.notification.repository.NotificationRepository;
 import org.ikuzo.otboo.domain.user.entity.User;
@@ -14,12 +15,15 @@ import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.event.message.NotificationCreatedEvent;
 import org.ikuzo.otboo.global.security.OtbooUserDetails;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.AccessDeniedException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -102,5 +106,21 @@ public class NotificationServiceImpl implements NotificationService {
             sortBy,
             sortDirection
         );
+    }
+
+    @Override
+    @Transactional
+    public void deleteNotification(UUID notificationId) {
+        Notification notification = notificationRepository.findById(notificationId).orElseThrow(() -> NotificationNotFoundException.notFoundException(notificationId));
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        OtbooUserDetails principal = (OtbooUserDetails) authentication.getPrincipal();
+        UUID currentId = principal.getUserDto().id();
+
+        if (!notification.getReceiverId().equals(currentId)) {
+            throw new AuthorizationDeniedException("삭제할 권한이 없습니다.");
+        }
+
+        notificationRepository.delete(notification);
     }
 }
