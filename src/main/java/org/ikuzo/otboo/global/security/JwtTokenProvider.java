@@ -141,7 +141,7 @@ public class JwtTokenProvider {
         }
     }
 
-    public Cookie genereateRefreshTokenCookie(String refreshToken) {
+    public Cookie generateRefreshTokenCookie(String refreshToken) {
         // Set refresh token in HttpOnly cookie
         Cookie refreshCookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken);
         refreshCookie.setHttpOnly(true);

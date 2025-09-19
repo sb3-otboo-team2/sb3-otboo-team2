@@ -38,7 +38,7 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
                 String refreshToken = tokenProvider.generateRefreshToken(userDetails);
 
                 // Set refresh token in HttpOnly cookie
-                Cookie refreshCookie = tokenProvider.genereateRefreshTokenCookie(refreshToken);
+                Cookie refreshCookie = tokenProvider.generateRefreshTokenCookie(refreshToken);
                 response.addCookie(refreshCookie);
 
                 JwtDto jwtDto = new JwtDto(

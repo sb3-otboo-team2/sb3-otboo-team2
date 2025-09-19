@@ -29,7 +29,7 @@ public class AuthController {
         HttpServletResponse response) {
         log.info("토큰 리프레시 요청");
         JwtInformation refreshResult = authService.refreshToken(refreshToken);
-        Cookie refreshCookie = jwtTokenProvider.genereateRefreshTokenCookie(
+        Cookie refreshCookie = jwtTokenProvider.generateRefreshTokenCookie(
             refreshResult.refreshToken());
         response.addCookie(refreshCookie);
 
