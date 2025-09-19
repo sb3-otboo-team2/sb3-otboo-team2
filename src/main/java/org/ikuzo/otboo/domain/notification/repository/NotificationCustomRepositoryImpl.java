@@ -26,8 +26,8 @@ public class NotificationCustomRepositoryImpl implements NotificationCustomRepos
 
         if (cursor != null && idAfter != null) {
             query.where(notification.createdAt.lt(cursor)
-                .or(notification.createdAt.eq(cursor))
-                .and(notification.id.lt(idAfter)));
+                .or(notification.createdAt.eq(cursor)
+                    .and(notification.id.lt(idAfter))));
         }
 
         return query
