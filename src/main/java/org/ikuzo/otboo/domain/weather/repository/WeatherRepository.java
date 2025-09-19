@@ -11,4 +11,6 @@ public interface WeatherRepository extends JpaRepository<Weather, UUID> {
     Optional<Weather> findTop1ByUserOrderByForecastAtDesc(User user);
 
     Optional<Weather> findTop1ByUserAndForecastAtLessThanOrderByForecastAtDesc(User user, Instant forecastAt);
+
+    Optional<Weather> findByUserAndForecastAt(User user, Instant forecastAt);
 }

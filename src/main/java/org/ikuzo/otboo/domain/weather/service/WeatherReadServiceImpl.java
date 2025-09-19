@@ -14,10 +14,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.domain.weather.client.KakaoLocalClient;
 import org.ikuzo.otboo.domain.weather.client.WeatherApiClient;
 import org.ikuzo.otboo.domain.weather.client.WeatherApiResponse;
@@ -31,9 +32,14 @@ import org.ikuzo.otboo.domain.weather.dto.WeatherAPILocation;
 import org.ikuzo.otboo.domain.weather.dto.WeatherDto;
 import org.ikuzo.otboo.domain.weather.dto.WindSpeedDto;
 import org.ikuzo.otboo.domain.weather.dto.WindWord;
+import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.ikuzo.otboo.domain.weather.exception.WeatherNoForecastException;
+import org.ikuzo.otboo.domain.weather.repository.WeatherRepository;
 import org.ikuzo.otboo.domain.weather.util.KmaGridConverter;
 import org.ikuzo.otboo.domain.weather.util.KmaGridConverter.XY;
+import org.ikuzo.otboo.global.security.OtbooUserDetails;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +50,8 @@ public class WeatherReadServiceImpl implements WeatherReadService {
 
     private final WeatherApiClient weatherApiClient;
     private final KakaoLocalClient kakaoLocalClient;
+    private final WeatherRepository weatherRepository;
+    private final UserRepository userRepository;
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -86,7 +94,7 @@ public class WeatherReadServiceImpl implements WeatherReadService {
      * GET /api/weathers
      */
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<WeatherDto> getWeatherByCoordinates(double latitude, double longitude) {
         log.debug("[WeatherReadService] 날씨 조회 시작: lat={}, lon={}", latitude, longitude);
         XY xy = KmaGridConverter.toXY(latitude, longitude);
@@ -114,11 +122,14 @@ public class WeatherReadServiceImpl implements WeatherReadService {
 
         // DTO 빌드
         List<WeatherDto> all = buildWeatherDtos(byFcst, today.baseDate(), today.baseTime(), loc, index, extrema);
+        List<WeatherDto> filtered = filterTodayUpcomingLimit(all, 5);
+
+        persistFetchedWeathers(filtered);
 
         // 오늘(Asia/Seoul) 이후 슬롯만 최대 5개
         log.info("[WeatherReadService] 날씨 조회 완료: 좌표({}, {})", latitude, longitude);
 
-        return filterTodayUpcomingLimit(all, 5);
+        return filtered;
     }
 
 
@@ -259,7 +270,6 @@ public class WeatherReadServiceImpl implements WeatherReadService {
             Double probability01 = (pop != null) ? pop / 100.0 : null;
 
             result.add(WeatherDto.builder()
-                .id(UUID.randomUUID())
                 .forecastedAt(forecastedAt)
                 .forecastAt(forecastAt)
                 .location(loc)
@@ -287,6 +297,99 @@ public class WeatherReadServiceImpl implements WeatherReadService {
             .filter(dto -> !dto.getForecastAt().isBefore(now))
             .limit(limit)
             .collect(Collectors.toList());
+    }
+
+    private void persistFetchedWeathers(List<WeatherDto> forecasts) {
+        Optional<User> userOpt = currentUser();
+        if (userOpt.isEmpty()) {
+            log.debug("[WeatherReadService] 인증된 사용자 없음 → 예보 저장 생략");
+            forecasts.forEach(dto -> dto.setId(null));
+            return;
+        }
+
+        User user = userOpt.get();
+        forecasts.forEach(dto -> saveForecast(user, dto));
+    }
+
+    private void saveForecast(User user, WeatherDto dto) {
+        if (!isPersistable(dto)) {
+            log.debug("[WeatherReadService] 필수 데이터 누락으로 저장 생략: forecastAt={}", dto.getForecastAt());
+            dto.setId(null);
+            return;
+        }
+
+        Weather candidate = convertToEntity(user, dto);
+        Weather entityToPersist = weatherRepository.findByUserAndForecastAt(user, candidate.getForecastAt())
+            .map(existing -> {
+                existing.updateFrom(candidate);
+                return existing;
+            })
+            .orElse(candidate);
+
+        Weather saved = weatherRepository.save(entityToPersist);
+        dto.setId(saved.getId());
+    }
+
+    private Weather convertToEntity(User user, WeatherDto dto) {
+        PrecipitationDto precipitation = dto.getPrecipitation();
+        TemperatureDto temperature = dto.getTemperature();
+        HumidityDto humidity = dto.getHumidity();
+        WindSpeedDto wind = dto.getWindSpeed();
+
+        return Weather.builder()
+            .user(user)
+            .forecastedAt(dto.getForecastedAt())
+            .forecastAt(dto.getForecastAt())
+            .skyStatus(dto.getSkyStatus().name())
+            .precipitationType(selectPrecipitationType(precipitation))
+            .precipitationAmount(precipitation != null ? precipitation.getAmount() : null)
+            .precipitationProbability(
+                probabilityToPercent(precipitation != null ? precipitation.getProbability() : null))
+            .temperatureCurrent(temperature.getCurrent())
+            .temperatureCompared(temperature.getComparedToDayBefore())
+            .temperatureMin(temperature.getMin())
+            .temperatureMax(temperature.getMax())
+            .windSpeed(wind != null ? wind.getSpeed() : null)
+            .windSpeedWord(wind != null && wind.getAsWord() != null ? wind.getAsWord().name() : null)
+            .humidityCurrent(humidity != null ? humidity.getCurrent() : null)
+            .humidityCompared(humidity != null ? humidity.getComparedToDayBefore() : null)
+            .build();
+    }
+
+    private boolean isPersistable(WeatherDto dto) {
+        if (dto == null || dto.getSkyStatus() == null || dto.getForecastAt() == null || dto.getForecastedAt() == null) {
+            return false;
+        }
+        TemperatureDto temperature = dto.getTemperature();
+        PrecipitationDto precipitation = dto.getPrecipitation();
+        return temperature != null && temperature.getCurrent() != null
+            && precipitation != null && precipitation.getProbability() != null;
+    }
+
+    private String selectPrecipitationType(PrecipitationDto precipitation) {
+        if (precipitation == null || precipitation.getType() == null) {
+            return PrecipitationType.NONE.name();
+        }
+        return precipitation.getType().name();
+    }
+
+    private Double probabilityToPercent(Double probability) {
+        return probability == null ? 0d : probability * 100.0;
+    }
+
+    private Optional<User> currentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Optional.empty();
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof String principalName && "anonymousUser".equals(principalName)) {
+            return Optional.empty();
+        }
+        if (!(principal instanceof OtbooUserDetails details)) {
+            return Optional.empty();
+        }
+        return userRepository.findById(details.getUserDto().id());
     }
 
     private record FetchResult(String baseDate, String baseTime, List<WeatherApiResponse.Item> items) {
