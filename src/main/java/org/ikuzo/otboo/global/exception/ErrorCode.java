@@ -31,6 +31,7 @@ public enum ErrorCode {
     FOLLOW_NOT_FOUND("존재하지 않는 팔로우 입니다."),
 
     // 날씨/외부 API
+    WEATHER_NOT_FOUND("날씨값을 찾을 수 없습니다."),
     WEATHER_NO_FORECAST("기상청 예보 데이터가 없습니다."),
     EXTERNAL_API_ERROR("외부 API 호출 중 오류가 발생했습니다.");
 
