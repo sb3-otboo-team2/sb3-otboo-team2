@@ -7,8 +7,15 @@ import org.ikuzo.otboo.domain.notification.entity.Level;
 import org.ikuzo.otboo.domain.notification.entity.Notification;
 import org.ikuzo.otboo.domain.notification.mapper.NotificationMapper;
 import org.ikuzo.otboo.domain.notification.repository.NotificationRepository;
+import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
+import org.ikuzo.otboo.domain.user.repository.UserRepository;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.event.message.NotificationCreatedEvent;
+import org.ikuzo.otboo.global.security.OtbooUserDetails;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +33,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserRepository userRepository;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Override
@@ -52,5 +60,47 @@ public class NotificationServiceImpl implements NotificationService {
             new NotificationCreatedEvent(createdNotifications, Instant.now())
         );
         log.info("새 알림 생성 완료: receiverIds={}", receiverIds);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<NotificationDto> getNotifications(Instant cursor, UUID idAfter, int limit) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        OtbooUserDetails principal = (OtbooUserDetails) authentication.getPrincipal();
+        String userEmail = principal.getUsername();
+
+        User user = userRepository.findByEmail(userEmail).orElseThrow(UserNotFoundException::new);
+
+        log.info("userId={}", user.getId());
+        List<Notification> list = notificationRepository.findByCursor(user.getId(), cursor, idAfter, limit);
+        List<Notification> notifications = list.size() > limit ? list.subList(0, limit) : list;
+
+        boolean hasNext = list.size() > limit;
+        Instant nextCursor = null;
+        UUID nextIdAfter = null;
+
+        if (hasNext && !list.isEmpty()) {
+            Notification last = notifications.get(notifications.size() - 1);
+            nextCursor = last.getCreatedAt();
+            nextIdAfter = last.getId();
+        }
+        String sortBy = "createdAt";
+        String sortDirection = "DESCENDING";
+
+        long totalCount = notificationRepository.countByReceiverId(user.getId());
+
+        List<NotificationDto> content = notifications.stream()
+            .map(notificationMapper::toDto)
+            .toList();
+
+        return new PageResponse<>(
+            content,
+            nextCursor,
+            nextIdAfter,
+            hasNext,
+            totalCount,
+            sortBy,
+            sortDirection
+        );
     }
 }
