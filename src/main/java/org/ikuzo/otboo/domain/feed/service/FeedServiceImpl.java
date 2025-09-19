@@ -12,6 +12,7 @@ import org.ikuzo.otboo.domain.clothes.repository.ClothesRepository;
 import org.ikuzo.otboo.domain.feed.dto.FeedCreateRequest;
 import org.ikuzo.otboo.domain.feed.dto.FeedDto;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
+import org.ikuzo.otboo.domain.feed.exception.FeedClothesNotFoundException;
 import org.ikuzo.otboo.domain.feed.mapper.FeedMapper;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
 import org.ikuzo.otboo.domain.user.entity.User;
@@ -46,12 +47,12 @@ public class FeedServiceImpl implements FeedService {
         // 의상 ID 중복 제거 후 일괄 조회 + 개수 검증
         Set<UUID> uniqueIds = new HashSet<>(req.clothesIds());
         List<Clothes> clothesList = clothesRepository.findAllById(uniqueIds);
-        
+
         if (clothesList.size() != uniqueIds.size()) {
             Set<UUID> found = clothesList.stream().map(Clothes::getId).collect(Collectors.toSet());
             Set<UUID> missing = new HashSet<>(uniqueIds);
             missing.removeAll(found);
-            throw new IllegalArgumentException("존재하지 않는 의상 ID: " + missing);
+            throw FeedClothesNotFoundException.withMissingIds(missing);
         }
 
         Feed feed = Feed.builder()
