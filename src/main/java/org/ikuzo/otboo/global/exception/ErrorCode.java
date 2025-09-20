@@ -32,6 +32,7 @@ public enum ErrorCode {
 
     // 피드
     FEED_CLOTHES_NOT_FOUND("존재하지 않는 의상 ID가 포함되어 있습니다."),
+    FEED_UNMATCH_CLOTHES_OWNER("해당 사용자가 가지고 있지 않는 의상입니다."),
 
     // 날씨/외부 API
     WEATHER_NOT_FOUND("날씨값을 찾을 수 없습니다."),

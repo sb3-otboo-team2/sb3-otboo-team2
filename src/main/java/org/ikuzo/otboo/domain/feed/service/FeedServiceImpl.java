@@ -13,6 +13,7 @@ import org.ikuzo.otboo.domain.feed.dto.FeedCreateRequest;
 import org.ikuzo.otboo.domain.feed.dto.FeedDto;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
 import org.ikuzo.otboo.domain.feed.exception.FeedClothesNotFoundException;
+import org.ikuzo.otboo.domain.feed.exception.FeedClothesUnmatchOwner;
 import org.ikuzo.otboo.domain.feed.mapper.FeedMapper;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
 import org.ikuzo.otboo.domain.user.entity.User;
@@ -53,6 +54,13 @@ public class FeedServiceImpl implements FeedService {
             Set<UUID> missing = new HashSet<>(uniqueIds);
             missing.removeAll(found);
             throw FeedClothesNotFoundException.withMissingIds(missing);
+        }
+
+        // 사용자가 가지고 있는 의상이 맞는지 검증
+        boolean allOwned = clothesList.stream()
+            .allMatch(c -> c.getOwner() != null && author.getId().equals(c.getOwner().getId()));
+        if (!allOwned) {
+            throw new FeedClothesUnmatchOwner();
         }
 
         Feed feed = Feed.builder()
