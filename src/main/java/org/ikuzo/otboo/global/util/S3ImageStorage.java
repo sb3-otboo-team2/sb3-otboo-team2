@@ -45,7 +45,7 @@ public class S3ImageStorage {
         if (originalFileName == null || originalFileName.isBlank()) {
             originalFileName = "default.jpg";
         }
-        String uniqueFileName = generateUniqueFileName(originalFileName);
+        String uniqueFileName = generateUniqueFileName(safeFileNameFromUrl(originalFileName));
 
         // S3 저장 경로 생성 (폴더경로 + 파일명)
         String s3Key = folderPath + uniqueFileName;
@@ -76,6 +76,17 @@ public class S3ImageStorage {
                 e.getMessage());
             throw new RuntimeException("이미지 업로드 중 오류가 발생했습니다.", e);
         }
+    }
+
+    private String safeFileNameFromUrl(String url) {
+        String path = url;
+        int q = path.indexOf('?');
+        if (q >= 0) path = path.substring(0, q);        // ? 이하 제거
+        // 마지막 / 뒤만 취해서 파일명만 사용
+        String fileName = path.substring(path.lastIndexOf('/') + 1);
+        // 너무 길거나 위험한 문자 정리
+        fileName = fileName.replaceAll("[^A-Za-z0-9._-]", "_");
+        return fileName;
     }
 
     /**
