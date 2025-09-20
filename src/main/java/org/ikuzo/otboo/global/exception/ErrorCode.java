@@ -30,7 +30,12 @@ public enum ErrorCode {
     FOLLOW_ALREADY_EXISTS("이미 팔로우한 사용자 입니다."),
     FOLLOW_NOT_FOUND("존재하지 않는 팔로우 입니다."),
 
+    // 피드
+    FEED_CLOTHES_NOT_FOUND("존재하지 않는 의상 ID가 포함되어 있습니다."),
+    FEED_UNMATCH_CLOTHES_OWNER("해당 사용자가 가지고 있지 않는 의상입니다."),
+
     // 날씨/외부 API
+    WEATHER_NOT_FOUND("날씨값을 찾을 수 없습니다."),
     WEATHER_NO_FORECAST("기상청 예보 데이터가 없습니다."),
     EXTERNAL_API_ERROR("외부 API 호출 중 오류가 발생했습니다.");
 
