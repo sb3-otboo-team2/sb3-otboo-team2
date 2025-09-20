@@ -1,7 +1,9 @@
 package org.ikuzo.otboo.domain.feed.service;
 
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -45,23 +47,39 @@ public class FeedServiceImpl implements FeedService {
         Weather weather = weatherRepository.findById(req.weatherId())
             .orElseThrow(WeatherNotFoundException::new);
 
-        // 의상 ID 중복 제거 후 일괄 조회 + 개수 검증
-        Set<UUID> uniqueIds = new HashSet<>(req.clothesIds());
+        // 의상 ID 중복 제거 후 입력 순서 유지하며 조회 + 검증
+        Set<UUID> uniqueIds = new LinkedHashSet<>(req.clothesIds());
         List<Clothes> clothesList = clothesRepository.findAllById(uniqueIds);
 
-        if (clothesList.size() != uniqueIds.size()) {
-            Set<UUID> found = clothesList.stream().map(Clothes::getId).collect(Collectors.toSet());
-            Set<UUID> missing = new HashSet<>(uniqueIds);
-            missing.removeAll(found);
+        Map<UUID, Clothes> clothesById = clothesList.stream()
+            .collect(Collectors.toMap(
+                Clothes::getId,
+                c -> c,
+                (left, right) -> left,
+                LinkedHashMap::new));
+
+        if (clothesById.size() != uniqueIds.size()) {
+            Set<UUID> missing = new LinkedHashSet<>(uniqueIds);
+            missing.removeAll(clothesById.keySet());
             throw FeedClothesNotFoundException.withMissingIds(missing);
         }
 
-        // 사용자가 가지고 있는 의상이 맞는지 검증
-        boolean allOwned = clothesList.stream()
-            .allMatch(c -> c.getOwner() != null && author.getId().equals(c.getOwner().getId()));
-        if (!allOwned) {
-            throw new FeedClothesUnmatchOwner();
+        Set<UUID> unauthorized = uniqueIds.stream()
+            .filter(id -> {
+                Clothes clothes = clothesById.get(id);
+                return clothes == null
+                    || clothes.getOwner() == null
+                    || !author.getId().equals(clothes.getOwner().getId());
+            })
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (!unauthorized.isEmpty()) {
+            throw FeedClothesUnmatchOwner.withUnauthorizedIds(unauthorized);
         }
+
+        List<Clothes> orderedClothes = uniqueIds.stream()
+            .map(clothesById::get)
+            .toList();
 
         Feed feed = Feed.builder()
             .author(author)
@@ -70,7 +88,7 @@ public class FeedServiceImpl implements FeedService {
             .likedByMe(false)
             .build();
 
-        feed.attachClothes(clothesList);
+        feed.attachClothes(orderedClothes);
         Feed saved = feedRepository.save(feed);
 
         return feedMapper.toDto(saved);
