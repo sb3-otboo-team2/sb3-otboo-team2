@@ -20,7 +20,7 @@ public record FeedCreateRequest(
     List<@NotNull UUID> clothesIds,
 
     @NotBlank(message = "content는 비어 있을 수 없습니다.")
-    @Size(max = 100, message = "content는 최대 100자까지 가능합니다.")
+    @Size(max = 200, message = "content는 최대 200자까지 가능합니다.")
     String content
 ) {
 }
