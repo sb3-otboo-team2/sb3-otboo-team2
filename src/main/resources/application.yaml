@@ -25,3 +25,9 @@ weather:
   batch:
     enabled: true
     cron: "0 0/30 * * * *"
+
+openai:
+  base-url: https://api.openai.com/v1
+  model: gpt-4o-mini
+  api-key: ${OPENAI_API_KEY}
+  timeout-ms: 8000

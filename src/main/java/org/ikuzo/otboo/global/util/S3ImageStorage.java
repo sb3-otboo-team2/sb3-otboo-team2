@@ -89,7 +89,7 @@ public class S3ImageStorage {
 
         // 파일 타입이 이미지인지 확인
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
+        if (contentType == null || (!contentType.startsWith("image/") && !"application/octet-stream".equalsIgnoreCase(contentType))) {
             throw new IllegalArgumentException("이미지 파일만 업로드 가능합니다. 현재 타입: " + contentType);
         }
 
@@ -100,7 +100,7 @@ public class S3ImageStorage {
         }
 
         // 지원하는 이미지 형식인지 확인
-        String[] supportedTypes = {"image/jpeg", "image/jpg", "image/png", "image/webp"};
+        String[] supportedTypes = {"image/jpeg", "image/jpg", "image/png", "image/webp", "application/octet-stream"};
         boolean isSupported = false;
         for (String type : supportedTypes) {
             if (type.equals(contentType)) {
