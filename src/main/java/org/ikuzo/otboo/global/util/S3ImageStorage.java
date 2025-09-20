@@ -45,16 +45,29 @@ public class S3ImageStorage {
         if (originalFileName == null || originalFileName.isBlank()) {
             originalFileName = "default.jpg";
         }
-        String uniqueFileName = generateUniqueFileName(safeFileNameFromUrl(originalFileName));
+
+        String safeFileName = safeFileNameFromUrl(originalFileName);
+        String uniqueFileName = generateUniqueFileName(safeFileName);
 
         // S3 저장 경로 생성 (폴더경로 + 파일명)
         String s3Key = folderPath + uniqueFileName;
+
+        String resolvedMime = MimeTypeResolver.resolveFromExtension(
+            safeFileName,
+            "application/octet-stream"
+        );
+
+        // getContentType()이 image/*가 아니거나 null/octal이면 우리가 계산한 값으로 대체
+        String requestMime = imageFile.getContentType();
+        if (requestMime == null || !requestMime.toLowerCase().startsWith("image/")) {
+            requestMime = resolvedMime;
+        }
 
         // S3 업로드 요청 객체 생성
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
             .bucket(bucketName)
             .key(s3Key)
-            .contentType(imageFile.getContentType())
+            .contentType(requestMime)
             .contentLength(imageFile.getSize())
             .build();
 
