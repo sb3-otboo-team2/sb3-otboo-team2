@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(OtbooException.class)
-    public ResponseEntity<ErrorResponse> handleDiscodeitException(OtbooException exception) {
+    public ResponseEntity<ErrorResponse> handleOtbooException(OtbooException exception) {
         log.error("커스텀 예외 발생: code={}, message={}", exception.getErrorCode(),
             exception.getMessage(),
             exception);
@@ -68,6 +68,8 @@ public class GlobalExceptionHandler {
 
             case ATTRIBUTE_NOT_FOUND, FOLLOW_NOT_FOUND, USER_NOT_FOUND, FEED_CLOTHES_NOT_FOUND, WEATHER_NOT_FOUND ->
                 HttpStatus.NOT_FOUND;
+
+            case INVALID_TOKEN, INVALID_USER_DETAILS -> HttpStatus.UNAUTHORIZED;
 
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };

@@ -9,6 +9,7 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import jakarta.servlet.http.Cookie;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
@@ -23,25 +24,41 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtTokenProvider {
 
+    public static final String REFRESH_TOKEN_COOKIE_NAME = "REFRESH_TOKEN";
+
     private final int accessTokenExpirationMs;
+    private final int refreshTokenExpirationMs;
 
     private final JWSSigner accessTokenSigner;
     private final JWSVerifier accessTokenVerifier;
+    private final JWSSigner refreshTokenSigner;
+    private final JWSVerifier refreshTokenVerifier;
 
     public JwtTokenProvider(
         @Value("${otboo.jwt.access-token.secret}") String accessTokenSecret,
-        @Value("${otboo.jwt.access-token.expiration-ms}") int accessTokenExpirationMs)
+        @Value("${otboo.jwt.access-token.expiration-ms}") int accessTokenExpirationMs,
+        @Value("${otboo.jwt.refresh-token.secret}") String refreshTokenSecret,
+        @Value("${otboo.jwt.refresh-token.expiration-ms}") int refreshTokenExpirationMs)
         throws JOSEException {
 
         this.accessTokenExpirationMs = accessTokenExpirationMs;
+        this.refreshTokenExpirationMs = refreshTokenExpirationMs;
 
         byte[] accessSecretBytes = accessTokenSecret.getBytes(StandardCharsets.UTF_8);
         this.accessTokenSigner = new MACSigner(accessSecretBytes);
         this.accessTokenVerifier = new MACVerifier(accessSecretBytes);
+
+        byte[] refreshSecretBytes = refreshTokenSecret.getBytes(StandardCharsets.UTF_8);
+        this.refreshTokenSigner = new MACSigner(refreshSecretBytes);
+        this.refreshTokenVerifier = new MACVerifier(refreshSecretBytes);
     }
 
     public String generateAccessToken(OtbooUserDetails userDetails) throws JOSEException {
         return generateToken(userDetails, accessTokenExpirationMs, accessTokenSigner, "access");
+    }
+
+    public String generateRefreshToken(OtbooUserDetails userDetails) throws JOSEException {
+        return generateToken(userDetails, refreshTokenExpirationMs, refreshTokenSigner, "refresh");
     }
 
     private String generateToken(OtbooUserDetails userDetails, int expirationMs, JWSSigner signer,
@@ -78,6 +95,10 @@ public class JwtTokenProvider {
 
     public boolean validateAccessToken(String token) {
         return validateToken(token, accessTokenVerifier, "access");
+    }
+
+    public boolean validateRefreshToken(String token) {
+        return validateToken(token, refreshTokenVerifier, "refresh");
     }
 
     private boolean validateToken(String token, JWSVerifier verifier, String expectedType) {
@@ -118,5 +139,15 @@ public class JwtTokenProvider {
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid JWT token", e);
         }
+    }
+
+    public Cookie generateRefreshTokenCookie(String refreshToken) {
+        // Set refresh token in HttpOnly cookie
+        Cookie refreshCookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken);
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(true); // Use HTTPS in production
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(refreshTokenExpirationMs / 1000);
+        return refreshCookie;
     }
 }
