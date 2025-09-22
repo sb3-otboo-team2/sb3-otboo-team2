@@ -95,7 +95,6 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
         }
     }
 
-    @Transactional(readOnly = true)
     protected ClothesDto enrichAttributesByDefinitions(ClothesDto dto) {
         List<ClothesAttributeWithDefDto> attrs = dto.attributes();
         if (attrs == null || attrs.isEmpty()) return dto;

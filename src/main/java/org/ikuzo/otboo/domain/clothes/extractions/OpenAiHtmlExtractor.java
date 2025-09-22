@@ -51,7 +51,7 @@ public class OpenAiHtmlExtractor {
             스키마: { name: string, imageUrl: string|null, type: string, attributes: [ {definitionName: string, value: string} ] }
             type은 다음 중 하나만: TOP,BOTTOM,DRESS,OUTER,UNDERWEAR,ACCESSORY,SHOES,SOCKS,HAT,BAG,SCARF,ETC
             attributes.definitionName은 아래 허용 목록의 키 중 하나여야 하며,
-             value는 해당 옵션 중 택1입니다(없으면 옵션들 중에서 가장 근접한 문자열).
+             value는 해당 옵션 중 택1입니다(없으면 옵션들 중에서 가장 근접한 1개를 골라).
             확실하지 않으면 null/빈 배열. 임의 추측 금지.
             """);
 

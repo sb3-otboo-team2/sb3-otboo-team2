@@ -40,7 +40,7 @@ public class S3ImageStorage {
             imageFile.getOriginalFilename(), imageFile.getSize());
 
         // 파일 유효성 검증
-        String resolvedMime = validateImageFile(imageFile);
+        String finalMime = validateImageFile(imageFile);
 
         // 고유한 파일명 생성 (UUID + 타임스탬프)
         String originalFileName = imageFile.getOriginalFilename();
@@ -57,7 +57,7 @@ public class S3ImageStorage {
         // getContentType()이 image/*가 아니거나 null/octal이면 미리 계산한 값으로 대체
         String requestMime = imageFile.getContentType();
         if (requestMime == null || !requestMime.toLowerCase().startsWith("image/")) {
-            requestMime = resolvedMime;
+            requestMime = finalMime;
         }
 
         // S3 업로드 요청 객체 생성
@@ -89,7 +89,7 @@ public class S3ImageStorage {
     }
 
     private String safeFileNameFromUrl(String url) {
-        String path = url;
+        String path = (url == null) ? "" : url;
         int q = path.indexOf('?');
         if (q >= 0) path = path.substring(0, q);        // ? 이하 제거
         // 마지막 / 뒤만 취해서 파일명만 사용
