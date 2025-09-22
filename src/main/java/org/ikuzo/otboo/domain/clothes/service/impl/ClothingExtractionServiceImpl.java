@@ -102,14 +102,14 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
             return dto;
         }
 
-        var defNamesLower = attrs.stream()
+        List<String> defNamesLower = attrs.stream()
             .map(ClothesAttributeWithDefDto::definitionName)
             .filter(Objects::nonNull)
             .map(s -> s.toLowerCase(Locale.ROOT))
             .distinct()
             .toList();
 
-        var defsMap = defRepo.findAllByNameInIgnoreCase(defNamesLower).stream()
+        Map<String, ClothesAttributeDef> defsMap = defRepo.findAllByNameInIgnoreCase(defNamesLower).stream()
             .collect(Collectors.toMap(
                 d -> d.getName().toLowerCase(Locale.ROOT),
                 Function.identity(),
@@ -117,14 +117,14 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
                 LinkedHashMap::new
             ));
 
-        var mapped = new ArrayList<ClothesAttributeWithDefDto>(attrs.size());
-        for (var a : attrs) {
-            var key =
+        List<ClothesAttributeWithDefDto> mapped = new ArrayList<ClothesAttributeWithDefDto>(attrs.size());
+        for (ClothesAttributeWithDefDto a : attrs) {
+            String key =
                 a.definitionName() == null ? null : a.definitionName().toLowerCase(Locale.ROOT);
-            var def = key == null ? null : defsMap.get(key);
+            ClothesAttributeDef def = key == null ? null : defsMap.get(key);
 
             if (def != null) {
-                var values = def.getOptions().stream()
+                List<String> values = def.getOptions().stream()
                     .map(AttributeOption::getValue)
                     .toList();
 
