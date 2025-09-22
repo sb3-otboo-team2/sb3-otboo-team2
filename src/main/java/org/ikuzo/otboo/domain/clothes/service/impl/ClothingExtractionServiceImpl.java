@@ -22,7 +22,6 @@ import org.ikuzo.otboo.domain.clothes.parser.HtmlParserResolver;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothingExtractionService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 @Slf4j
