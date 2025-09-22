@@ -60,10 +60,24 @@ public class User extends BaseUpdatableEntity {
     @Column(nullable = false)
     private Role role = Role.USER;
 
+    @Column
+    private String provider;
+
+    @Column
+    private String providerId;
+
     public User(String email, String name, String password) {
         this.email = email;
         this.name = name;
         this.password = password;
     }
 
+    public User(String email, String name, String password, String profileImageUrl, String provider, String providerId) {
+        this.email = email;
+        this.name = name;
+        this.password = password;
+        this.profileImageUrl = profileImageUrl;
+        this.provider = provider;
+        this.providerId = providerId;
+    }
 }
