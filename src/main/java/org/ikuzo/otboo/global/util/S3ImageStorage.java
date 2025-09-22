@@ -119,23 +119,24 @@ public class S3ImageStorage {
             throw new IllegalArgumentException(
                 "이미지 파일만 업로드 가능합니다. 현재 타입: " + contentType + ", 추정: " + extMime);
         }
+        String finalMime = (declaredImage ? contentType : extMime).toLowerCase();
 
         // 파일 크기 제한 (10MB)
         long maxSizeInBytes = 10 * 1024 * 1024;
         if (file.getSize() > maxSizeInBytes) {
-            throw new IllegalArgumentException("이미지 파일 크기는 5MB를 초과할 수 없습니다. 현재 크기: " + file.getSize() + "바이트");
+            throw new IllegalArgumentException("이미지 파일 크기는 10MB를 초과할 수 없습니다. 현재 크기: " + file.getSize() + "바이트");
         }
 
         // 지원하는 이미지 형식인지 확인
-        String[] supportedTypes = {"image/jpeg", "image/jpg", "image/png", "image/webp", "application/octet-stream"};
+        String[] supportedTypes = {"image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+            "image/bmp", "image/svg+xml", "image/x-icon", "image/tiff", "application/octet-stream"};
         boolean isSupported = false;
         for (String type : supportedTypes) {
-            if (type.equals(contentType)) {
+            if (type.equalsIgnoreCase(finalMime)) {
                 isSupported = true;
                 break;
             }
         }
-
         if (!isSupported) {
             throw new IllegalArgumentException("지원하지 않는 이미지 형식입니다. 지원 형식: JPEG, JPG, PNG, WebP");
         }

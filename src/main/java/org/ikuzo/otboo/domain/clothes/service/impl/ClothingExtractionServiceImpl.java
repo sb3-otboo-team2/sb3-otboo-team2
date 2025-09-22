@@ -98,29 +98,41 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
     @Transactional(readOnly = true)
     protected ClothesDto enrichAttributesByDefinitions(ClothesDto dto) {
         List<ClothesAttributeWithDefDto> attrs = dto.attributes();
-        if (attrs == null || attrs.isEmpty()) {
-            return dto;
-        }
+        if (attrs == null || attrs.isEmpty()) return dto;
 
-        List<String> defNamesLower = attrs.stream()
+        List<String> defNamesLower = collectDefNamesLower(attrs);
+        Map<String, ClothesAttributeDef> defsMap = loadDefsMap(defNamesLower);
+        List<ClothesAttributeWithDefDto> mapped = mapAttributesWithDefinitions(attrs, defsMap);
+
+        return new ClothesDto(dto.id(), dto.ownerId(), dto.name(), dto.imageUrl(), dto.type(), mapped);
+    }
+
+    private static List<String> collectDefNamesLower(List<ClothesAttributeWithDefDto> attrs) {
+        return attrs.stream()
             .map(ClothesAttributeWithDefDto::definitionName)
             .filter(Objects::nonNull)
             .map(s -> s.toLowerCase(Locale.ROOT))
             .distinct()
             .toList();
+    }
 
-        Map<String, ClothesAttributeDef> defsMap = defRepo.findAllByNameInIgnoreCase(defNamesLower).stream()
+    private Map<String, ClothesAttributeDef> loadDefsMap(List<String> defNamesLower) {
+        return defRepo.findAllByNameInIgnoreCase(defNamesLower).stream()
             .collect(Collectors.toMap(
                 d -> d.getName().toLowerCase(Locale.ROOT),
                 Function.identity(),
                 (a, b) -> a,
                 LinkedHashMap::new
             ));
+    }
 
-        List<ClothesAttributeWithDefDto> mapped = new ArrayList<ClothesAttributeWithDefDto>(attrs.size());
+    private static List<ClothesAttributeWithDefDto> mapAttributesWithDefinitions(
+        List<ClothesAttributeWithDefDto> attrs,
+        Map<String, ClothesAttributeDef> defsMap
+    ) {
+        List<ClothesAttributeWithDefDto> mapped = new ArrayList<>(attrs.size());
         for (ClothesAttributeWithDefDto a : attrs) {
-            String key =
-                a.definitionName() == null ? null : a.definitionName().toLowerCase(Locale.ROOT);
+            String key = normOrNull(a.definitionName());
             ClothesAttributeDef def = key == null ? null : defsMap.get(key);
 
             if (def != null) {
@@ -138,8 +150,10 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
                 mapped.add(a);
             }
         }
+        return mapped;
+    }
 
-        return new ClothesDto(dto.id(), dto.ownerId(), dto.name(), dto.imageUrl(), dto.type(),
-            mapped);
+    private static String normOrNull(String s) {
+        return (s == null) ? null : s.toLowerCase(Locale.ROOT);
     }
 }

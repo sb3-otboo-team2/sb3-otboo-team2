@@ -19,7 +19,8 @@ public interface ClothesAttributeDefRepository extends JpaRepository<ClothesAttr
         select distinct d
         from ClothesAttributeDef d
         left join fetch d.options
-        where lower(d.name) in :names
-    """)
-    List<ClothesAttributeDef> findAllByNameInIgnoreCase(@Param("names") Collection<String> names);
+        where lower(d.name) in :lowerNames
+        """)
+    List<ClothesAttributeDef> findAllByNameInIgnoreCase(
+        @Param("lowerNames") Collection<String> lowerNames);
 }
