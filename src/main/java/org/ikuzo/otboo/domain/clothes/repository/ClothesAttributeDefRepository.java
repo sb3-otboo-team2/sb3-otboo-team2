@@ -1,10 +1,12 @@
 package org.ikuzo.otboo.domain.clothes.repository;
 
-import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -13,7 +15,11 @@ public interface ClothesAttributeDefRepository extends JpaRepository<ClothesAttr
 
     boolean existsByName(String name);
 
-    @EntityGraph(attributePaths = "options")
-    Optional<ClothesAttributeDef> findByNameIgnoreCase(String name);
-
+    @Query("""
+        select distinct d
+        from ClothesAttributeDef d
+        left join fetch d.options
+        where lower(d.name) in :names
+    """)
+    List<ClothesAttributeDef> findAllByNameInIgnoreCase(@Param("names") Collection<String> names);
 }

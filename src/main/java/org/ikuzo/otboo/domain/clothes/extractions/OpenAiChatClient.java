@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -26,13 +27,21 @@ public class OpenAiChatClient {
             "temperature", 0
         );
 
-
         return openAiWebClient.post()
             .uri("/chat/completions")
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(body)
             .retrieve()
+            .onStatus(HttpStatusCode::isError,
+                resp -> resp.bodyToMono(String.class)
+                    .map(error -> new RuntimeException("OpenAi error: " + error)))
             .bodyToMono(JsonNode.class)
-            .map(json -> json.at("/choices/0/message/content").asText());
+            .map(json -> {
+                JsonNode n = json.at("/choices/0/message/content");
+                if (n.isMissingNode() || n.isNull() || n.asText().isBlank()) {
+                    throw new IllegalStateException("Empty content in OpenAI response: " + json);
+                }
+                return n.asText();
+            });
     }
 }

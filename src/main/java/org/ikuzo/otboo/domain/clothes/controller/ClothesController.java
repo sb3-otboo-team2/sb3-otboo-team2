@@ -121,19 +121,16 @@ public class ClothesController implements ClothesApi {
     public Mono<ResponseEntity<ClothesDto>> extractByUrl(
         @RequestParam("url") String url
     ) {
-        log.info("[Controller] 구매 링크로 의상 정보 요청 - url: {}", url);
 
-        Mono<ClothesDto> clothesDtoMono = clothingExtractionService.extractFromUrlReactive(url);
-
-        Mono<ResponseEntity<ClothesDto>> responseEntityMono = clothesDtoMono
+        return clothingExtractionService.extractFromUrlReactive(url)
+            .doOnSubscribe(s -> log.info("[Controller] 구매 링크로 의상 정보 요청 - url: {}", url))
+            .doOnSuccess(dto -> log.info("[Controller] 구매 링크로 의상 정보 완료 - name: {}",
+                dto != null ? dto.name() : null))
+            .doOnError(e -> log.error("[Controller] 의상 정보 추출 실패 - url: {}, err: {}",
+                url, e.toString(), e))
+            .doFinally(sig -> log.info("[Controller] 요청 종료 ({}) - url: {}", sig, url))
             .map(ResponseEntity::ok)
-            .onErrorResume(e -> {
-                log.error("[Extraction] failed: {}", e.getMessage(), e);
-                return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
-            });
+            .onErrorResume(e -> Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build()));
 
-        log.info("[Controller] 구매 링크로 의상 정보 완료 - clothesDto: {}", clothesDtoMono);
-
-        return responseEntityMono;
     }
 }

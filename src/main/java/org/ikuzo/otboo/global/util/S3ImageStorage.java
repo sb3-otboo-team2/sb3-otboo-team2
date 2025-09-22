@@ -15,6 +15,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 @Slf4j
 @Component
 public class S3ImageStorage {
+
     private final S3Client s3Client;
 
     @Value("${AWS_S3_BUCKET}")
@@ -29,7 +30,8 @@ public class S3ImageStorage {
 
     /**
      * 이미지 파일을 S3에 업로드
-     * @param imageFile 업로드할 이미지 파일
+     *
+     * @param imageFile  업로드할 이미지 파일
      * @param folderPath S3 내 저장 경로 (예: "profileImage/")
      * @return S3에 저장된 이미지 URL
      */
@@ -38,7 +40,7 @@ public class S3ImageStorage {
             imageFile.getOriginalFilename(), imageFile.getSize());
 
         // 파일 유효성 검증
-        validateImageFile(imageFile);
+        String resolvedMime = validateImageFile(imageFile);
 
         // 고유한 파일명 생성 (UUID + 타임스탬프)
         String originalFileName = imageFile.getOriginalFilename();
@@ -51,11 +53,6 @@ public class S3ImageStorage {
 
         // S3 저장 경로 생성 (폴더경로 + 파일명)
         String s3Key = folderPath + uniqueFileName;
-
-        String resolvedMime = MimeTypeResolver.resolveFromExtension(
-            safeFileName,
-            "application/octet-stream"
-        );
 
         // getContentType()이 image/*가 아니거나 null/octal이면 미리 계산한 값으로 대체
         String requestMime = imageFile.getContentType();
@@ -105,7 +102,7 @@ public class S3ImageStorage {
     /**
      * 이미지 파일 유효성 검증
      */
-    private void validateImageFile(MultipartFile file) {
+    private String validateImageFile(MultipartFile file) {
         // 파일이 비어있는지 확인
         if (file.isEmpty()) {
             throw new IllegalArgumentException("업로드할 이미지 파일이 없습니다.");
@@ -113,12 +110,18 @@ public class S3ImageStorage {
 
         // 파일 타입이 이미지인지 확인
         String contentType = file.getContentType();
-        if (contentType == null || (!contentType.startsWith("image/") && !"application/octet-stream".equalsIgnoreCase(contentType))) {
-            throw new IllegalArgumentException("이미지 파일만 업로드 가능합니다. 현재 타입: " + contentType);
+        String fileName = file.getOriginalFilename();
+        String extMime = MimeTypeResolver.resolveFromExtension(safeFileNameFromUrl(fileName),
+            "application/octet-stream");
+        boolean declaredImage = contentType != null && contentType.startsWith("image/");
+        boolean inferredImage = extMime != null && extMime.startsWith("image/");
+        if (!(declaredImage || inferredImage)) {
+            throw new IllegalArgumentException(
+                "이미지 파일만 업로드 가능합니다. 현재 타입: " + contentType + ", 추정: " + extMime);
         }
 
-        // 파일 크기 제한 (5MB)
-        long maxSizeInBytes = 5 * 1024 * 1024;
+        // 파일 크기 제한 (10MB)
+        long maxSizeInBytes = 10 * 1024 * 1024;
         if (file.getSize() > maxSizeInBytes) {
             throw new IllegalArgumentException("이미지 파일 크기는 5MB를 초과할 수 없습니다. 현재 크기: " + file.getSize() + "바이트");
         }
@@ -136,6 +139,8 @@ public class S3ImageStorage {
         if (!isSupported) {
             throw new IllegalArgumentException("지원하지 않는 이미지 형식입니다. 지원 형식: JPEG, JPG, PNG, WebP");
         }
+
+        return extMime;
     }
 
     /**

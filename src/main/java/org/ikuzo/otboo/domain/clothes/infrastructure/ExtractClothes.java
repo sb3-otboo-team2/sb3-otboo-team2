@@ -2,7 +2,7 @@ package org.ikuzo.otboo.domain.clothes.infrastructure;
 
 import java.util.List;
 
-public record extractClothes(
+public record ExtractClothes(
     String name,
     String imageUrl, String type,
     List<ExtractedAttribute> attributes

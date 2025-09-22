@@ -2,8 +2,12 @@ package org.ikuzo.otboo.domain.clothes.service.impl;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +17,7 @@ import org.ikuzo.otboo.domain.clothes.entity.AttributeOption;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
 import org.ikuzo.otboo.domain.clothes.enums.ClothesType;
 import org.ikuzo.otboo.domain.clothes.extractions.OpenAiHtmlExtractor;
-import org.ikuzo.otboo.domain.clothes.infrastructure.extractClothes;
+import org.ikuzo.otboo.domain.clothes.infrastructure.ExtractClothes;
 import org.ikuzo.otboo.domain.clothes.parser.HtmlParserResolver;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothingExtractionService;
@@ -33,18 +37,20 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
     @Override
     public Mono<ClothesDto> extractFromUrlReactive(String url) {
 
-        log.info("[Service] LLM Extractor 시작, URL: {}", url);
+        URI uri;
+        try {
+            uri = URI.create(url);
+        } catch (IllegalArgumentException e) {
+            return Mono.error(new IllegalArgumentException("잘못된 URL 형식: " + url, e));
+        }
 
-        URI uri = URI.create(url);
-
-        Mono<ClothesDto> result = Mono.fromCallable(() -> htmlParserResolver.parse(uri))
-            .flatMap(parsed -> llmExtractor.extract(uri, parsed.fullHtml(), loadAllowedDefs()))
+        return Mono.fromCallable(() -> htmlParserResolver.parse(uri))
+            .onErrorMap(e -> new RuntimeException("HTML 파싱 실패: " + e.getMessage(), e))
+            .flatMap(parsed -> llmExtractor.extract(uri, parsed, loadAllowedDefs()))
             .map(this::toDto)
-            .map(this::enrichAttributesByDefinitions);
-
-        log.info("[Service] LLM Extractor 완료, URL: {}", url);
-
-        return result;
+            .map(this::enrichAttributesByDefinitions)
+            .doOnSubscribe(s -> log.info("[Service] LLM Extractor 시작, URL: {}", url))
+            .doOnSuccess(dto -> log.info("[Service] LLM Extractor 완료, URL: {}", url));
     }
 
     private Map<String, List<String>> loadAllowedDefs() {
@@ -58,7 +64,7 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
         );
     }
 
-    private ClothesDto toDto(extractClothes ex) {
+    private ClothesDto toDto(ExtractClothes ex) {
         List<ClothesAttributeWithDefDto> attrs = ex.attributes() == null ? List.of() :
             ex.attributes().stream()
                 .map(a -> new ClothesAttributeWithDefDto(
@@ -91,27 +97,48 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
 
     @Transactional(readOnly = true)
     protected ClothesDto enrichAttributesByDefinitions(ClothesDto dto) {
-        var mapped = new ArrayList<ClothesAttributeWithDefDto>();
-        if (dto.attributes() != null) {
-            for (var a : dto.attributes()) {
-                var defOpt = defRepo.findByNameIgnoreCase(a.definitionName());
-                if (defOpt.isPresent()) {
-                    var def = defOpt.get();
-                    var values = def.getOptions().stream()
-                        .map(AttributeOption::getValue)
-                        .toList();
+        List<ClothesAttributeWithDefDto> attrs = dto.attributes();
+        if (attrs == null || attrs.isEmpty()) {
+            return dto;
+        }
 
-                    mapped.add(new ClothesAttributeWithDefDto(
-                        def.getId(),
-                        def.getName(),
-                        values,
-                        a.value()
-                    ));
-                } else {
-                    mapped.add(a);
-                }
+        var defNamesLower = attrs.stream()
+            .map(ClothesAttributeWithDefDto::definitionName)
+            .filter(Objects::nonNull)
+            .map(s -> s.toLowerCase(Locale.ROOT))
+            .distinct()
+            .toList();
+
+        var defsMap = defRepo.findAllByNameInIgnoreCase(defNamesLower).stream()
+            .collect(Collectors.toMap(
+                d -> d.getName().toLowerCase(Locale.ROOT),
+                Function.identity(),
+                (a, b) -> a,
+                LinkedHashMap::new
+            ));
+
+        var mapped = new ArrayList<ClothesAttributeWithDefDto>(attrs.size());
+        for (var a : attrs) {
+            var key =
+                a.definitionName() == null ? null : a.definitionName().toLowerCase(Locale.ROOT);
+            var def = key == null ? null : defsMap.get(key);
+
+            if (def != null) {
+                var values = def.getOptions().stream()
+                    .map(AttributeOption::getValue)
+                    .toList();
+
+                mapped.add(new ClothesAttributeWithDefDto(
+                    def.getId(),
+                    def.getName(),
+                    values,
+                    a.value()
+                ));
+            } else {
+                mapped.add(a);
             }
         }
+
         return new ClothesDto(dto.id(), dto.ownerId(), dto.name(), dto.imageUrl(), dto.type(),
             mapped);
     }

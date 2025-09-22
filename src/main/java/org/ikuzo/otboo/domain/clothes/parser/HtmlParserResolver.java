@@ -11,13 +11,15 @@ public interface HtmlParserResolver {
      * @param finalUrl  리다이렉트 이후 최종 URL(없으면 원본)
      * @param title     og:title 또는 <title>
      * @param ogImage   og:image (없으면 null)
-     * @param contentType 응답 Content-Type (text/html 등)
+     * @param contentType 응답 Content-Type (text/html 등)\
+     * @param strippedText script/style/noscript 제거 후 텍스트
      */
     record Parsed(
         String fullHtml,
         String finalUrl,
         String title,
         String ogImage,
-        String contentType
+        String contentType,
+        String strippedText
     ) {}
 }

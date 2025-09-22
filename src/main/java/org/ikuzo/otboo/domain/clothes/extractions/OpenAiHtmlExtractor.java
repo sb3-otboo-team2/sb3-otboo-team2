@@ -9,7 +9,8 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.ikuzo.otboo.domain.clothes.config.OpenAiProps;
-import org.ikuzo.otboo.domain.clothes.infrastructure.extractClothes;
+import org.ikuzo.otboo.domain.clothes.infrastructure.ExtractClothes;
+import org.ikuzo.otboo.domain.clothes.parser.HtmlParserResolver;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Component;
@@ -25,18 +26,21 @@ public class OpenAiHtmlExtractor {
     private final ObjectMapper om = new ObjectMapper();
 
 
-    public Mono<extractClothes> extract(
+    public Mono<ExtractClothes> extract(
         URI uri,
-        String fullHtml,
+        HtmlParserResolver.Parsed parsed,
         Map<String, List<String>> allowedDefs
     ) {
-        Document doc = Jsoup.parse(fullHtml);
-        doc.select("script, style, noscript").remove();
-        String title = Optional.ofNullable(doc.selectFirst("meta[property=og:title]"))
-            .map(e -> e.attr("content")).orElse(doc.title());
-        String image = Optional.ofNullable(doc.selectFirst("meta[property=og:image]"))
-            .map(e -> e.attr("content")).orElse(null);
-        String text = doc.text();
+        final String title = Optional.ofNullable(parsed.title()).orElse("");
+        final String image = parsed.ogImage();
+
+        // 본문 텍스트: Parsed가 제공하면 그대로 사용, 없으면 빈 문자열 제공
+        String text = Optional.ofNullable(parsed.strippedText()).orElse("");
+        if (text.isBlank()) {
+            Document doc = Jsoup.parse(parsed.fullHtml() != null ? parsed.fullHtml() : "");
+            doc.select("script, style, noscript").remove();
+            text = doc.text();
+        }
         if (text.length() > 6000) {
             text = text.substring(0, 6000);
         }
@@ -46,7 +50,8 @@ public class OpenAiHtmlExtractor {
             반드시 JSON으로만 응답하세요.
             스키마: { name: string, imageUrl: string|null, type: string, attributes: [ {definitionName: string, value: string} ] }
             type은 다음 중 하나만: TOP,BOTTOM,DRESS,OUTER,UNDERWEAR,ACCESSORY,SHOES,SOCKS,HAT,BAG,SCARF,ETC
-            attributes.definitionName은 아래 허용 목록의 키 중 하나여야 하며, value는 해당 옵션 중 택1입니다(없으면 가장 근접 문자열).
+            attributes.definitionName은 아래 허용 목록의 키 중 하나여야 하며,
+             value는 해당 옵션 중 택1입니다(없으면 옵션들 중에서 가장 근접한 문자열).
             확실하지 않으면 null/빈 배열. 임의 추측 금지.
             """);
 
@@ -66,17 +71,17 @@ public class OpenAiHtmlExtractor {
                     String name = txt(root, "name");
                     String imageUrl = firstNonBlank(txt(root, "imageUrl"), image);
                     String type = normalizeType(txt(root, "type"));
-                    List<extractClothes.ExtractedAttribute> attrs = new ArrayList<>();
+                    List<ExtractClothes.ExtractedAttribute> attrs = new ArrayList<>();
                     if (root.has("attributes") && root.get("attributes").isArray()) {
                         for (JsonNode n : root.get("attributes")) {
                             String dn = txt(n, "definitionName");
                             String v = txt(n, "value");
                             if (dn != null && v != null) {
-                                attrs.add(new extractClothes.ExtractedAttribute(dn, v));
+                                attrs.add(new ExtractClothes.ExtractedAttribute(dn, v));
                             }
                         }
                     }
-                    return Mono.just(new extractClothes(name, imageUrl, type, attrs));
+                    return Mono.just(new ExtractClothes(name, imageUrl, type, attrs));
                 } catch (Exception e) {
                     return Mono.error(e);
                 }

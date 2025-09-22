@@ -29,8 +29,14 @@ public class JsoupHtmlParser implements HtmlParserResolver {
                 .method(Connection.Method.GET)
                 .execute();
 
-            String finalUrl = Optional.ofNullable(res.url()).map(Object::toString).orElse(uri.toString());
+            String finalUrl = Optional.of(res.url()).map(Object::toString)
+                .orElse(uri.toString());
             String contentType = Optional.ofNullable(res.contentType()).orElse("text/html");
+            String ct = contentType.toLowerCase();
+            if (!(ct.startsWith("text/html") || ct.contains("xhtml"))) {
+                throw new IllegalStateException(
+                    "Unsupported content-type for parsing: " + contentType);
+            }
 
             Document doc = res.parse();
             doc.select("script, style, noscript").remove();
@@ -43,7 +49,15 @@ public class JsoupHtmlParser implements HtmlParserResolver {
                 .map(e -> e.attr("content")).filter(s -> !s.isBlank())
                 .orElse(null);
 
-            return new Parsed(doc.outerHtml(), finalUrl, title, ogImage, contentType);
+            String strippedText = doc.text();
+
+            return new Parsed(
+                doc.outerHtml(),
+                finalUrl, title,
+                ogImage,
+                contentType,
+                strippedText
+            );
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to fetch/parse HTML: " + uri, e);

@@ -9,7 +9,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import java.util.UUID;
+import org.hibernate.validator.constraints.URL;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesDto;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesCreateRequest;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesUpdateRequest;
@@ -141,7 +143,7 @@ public interface ClothesApi {
         )
     })
     Mono<ResponseEntity<ClothesDto>> extractByUrl(
-        @RequestParam("url") String url
+        @RequestParam("url") @NotBlank @URL(regexp = "^https?://.+") String url
     );
 
 }
