@@ -20,6 +20,10 @@ import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.domain.weather.client.KakaoLocalClient;
 import org.ikuzo.otboo.domain.weather.client.WeatherApiClient;
 import org.ikuzo.otboo.domain.weather.client.WeatherApiResponse;
+import org.ikuzo.otboo.domain.weather.client.WeatherApiResponse.Body;
+import org.ikuzo.otboo.domain.weather.client.WeatherApiResponse.Item;
+import org.ikuzo.otboo.domain.weather.client.WeatherApiResponse.Items;
+import org.ikuzo.otboo.domain.weather.client.WeatherApiResponse.Response;
 import org.ikuzo.otboo.domain.weather.dto.KakaoRegionDocument;
 import org.ikuzo.otboo.domain.weather.dto.KakaoRegionResponse;
 import org.ikuzo.otboo.domain.weather.dto.RegionInfoDto;
@@ -95,16 +99,16 @@ public class WeatherServiceImpl implements WeatherService {
             userId, baseDate, baseTime, xy.x(), xy.y());
 
         WeatherApiResponse resp = weatherApiClient.getVillageforecast(baseDate, baseTime, xy.x(), xy.y());
-        List<WeatherApiResponse.Item> items = Optional.ofNullable(resp)
+        List<Item> items = Optional.ofNullable(resp)
             .map(WeatherApiResponse::getResponse)
-            .map(WeatherApiResponse.Response::getBody)
-            .map(WeatherApiResponse.Body::getItems)
-            .map(WeatherApiResponse.Items::getItem)
+            .map(Response::getBody)
+            .map(Body::getItems)
+            .map(Items::getItem)
             .orElse(List.of());
 
         // 동일 fcstDate+fcstTime 기준 예보 묶음 만들기
         Map<String, Map<String, String>> grouped = new LinkedHashMap<>();
-        for (WeatherApiResponse.Item it : items) {
+        for (Item it : items) {
             // 가장 이른(fcstDate+fcstTime) 키 선택 (사전순 == 시간순)
             String key = grouped.keySet().stream().min(String::compareTo).orElseThrow();
             grouped.computeIfAbsent(key, k -> new HashMap<>()).put(it.getCategory(), it.getFcstValue());

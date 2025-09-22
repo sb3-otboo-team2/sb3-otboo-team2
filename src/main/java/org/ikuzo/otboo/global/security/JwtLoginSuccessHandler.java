@@ -3,11 +3,13 @@ package org.ikuzo.otboo.global.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.domain.auth.dto.JwtDto;
 import org.ikuzo.otboo.global.exception.ErrorResponse;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
@@ -33,6 +35,11 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
         if (authentication.getPrincipal() instanceof OtbooUserDetails userDetails) {
             try {
                 String accessToken = tokenProvider.generateAccessToken(userDetails);
+                String refreshToken = tokenProvider.generateRefreshToken(userDetails);
+
+                // Set refresh token in HttpOnly cookie
+                Cookie refreshCookie = tokenProvider.generateRefreshTokenCookie(refreshToken);
+                response.addCookie(refreshCookie);
 
                 JwtDto jwtDto = new JwtDto(
                     userDetails.getUserDto(),

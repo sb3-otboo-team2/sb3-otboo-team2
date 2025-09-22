@@ -69,4 +69,20 @@ public class Weather extends BaseEntity {
     @Column(name = "humidity_compared")
     private Double humidityCompared;
 
+    public void updateFrom(Weather source) {
+        this.forecastedAt = source.forecastedAt;
+        this.forecastAt = source.forecastAt;
+        this.skyStatus = source.skyStatus;
+        this.precipitationType = source.precipitationType;
+        this.precipitationAmount = source.precipitationAmount;
+        this.precipitationProbability = source.precipitationProbability;
+        this.temperatureCurrent = source.temperatureCurrent;
+        this.temperatureCompared = source.temperatureCompared;
+        this.temperatureMin = source.temperatureMin;
+        this.temperatureMax = source.temperatureMax;
+        this.windSpeed = source.windSpeed;
+        this.windSpeedWord = source.windSpeedWord;
+        this.humidityCurrent = source.humidityCurrent;
+        this.humidityCompared = source.humidityCompared;
+    }
 }

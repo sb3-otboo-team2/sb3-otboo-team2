@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.global.security;
+package org.ikuzo.otboo.domain.auth.dto;
 
 import org.ikuzo.otboo.domain.user.dto.UserDto;
 
