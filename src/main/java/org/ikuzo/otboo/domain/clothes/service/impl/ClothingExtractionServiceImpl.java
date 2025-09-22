@@ -17,7 +17,7 @@ import org.ikuzo.otboo.domain.clothes.entity.AttributeOption;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
 import org.ikuzo.otboo.domain.clothes.enums.ClothesType;
 import org.ikuzo.otboo.domain.clothes.extractions.OpenAiHtmlExtractor;
-import org.ikuzo.otboo.domain.clothes.infrastructure.ExtractClothes;
+import org.ikuzo.otboo.domain.clothes.dto.ExtractClothes;
 import org.ikuzo.otboo.domain.clothes.parser.HtmlParserResolver;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothingExtractionService;

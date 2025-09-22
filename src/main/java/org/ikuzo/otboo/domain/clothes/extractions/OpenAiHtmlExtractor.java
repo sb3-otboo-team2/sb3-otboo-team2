@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.ikuzo.otboo.domain.clothes.config.OpenAiProps;
-import org.ikuzo.otboo.domain.clothes.infrastructure.ExtractClothes;
+import org.ikuzo.otboo.domain.clothes.dto.ExtractClothes;
 import org.ikuzo.otboo.domain.clothes.parser.HtmlParserResolver;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;

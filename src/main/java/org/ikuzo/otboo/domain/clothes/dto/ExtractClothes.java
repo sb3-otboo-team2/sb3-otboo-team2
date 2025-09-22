@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.domain.clothes.infrastructure;
+package org.ikuzo.otboo.domain.clothes.dto;
 
 import java.util.List;
 
