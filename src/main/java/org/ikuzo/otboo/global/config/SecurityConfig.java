@@ -1,11 +1,14 @@
 package org.ikuzo.otboo.global.config;
 
+import org.ikuzo.otboo.domain.user.entity.Role;
 import org.ikuzo.otboo.global.security.JwtAuthenticationFilter;
 import org.ikuzo.otboo.global.security.JwtLoginSuccessHandler;
 import org.ikuzo.otboo.global.security.LoginFailureHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -56,6 +59,14 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        return RoleHierarchyImpl.withDefaultRolePrefix()
+            .role(Role.ADMIN.name())
+            .implies(Role.USER.name())
+            .build();
     }
 }
 
