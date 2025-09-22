@@ -113,6 +113,10 @@
                 <label for="serverUrl">서버 URL:</label>
                 <input type="text" id="serverUrl" value="http://localhost:8080/ws" placeholder="ws://localhost:8080/ws">
             </div>
+            <div class="form-group">
+                <label for="jwtToken">JWT 토큰:</label>
+                <textarea id="jwtToken" rows="3" placeholder="Bearer 토큰을 입력하세요 (Bearer 제외하고 토큰만 입력)"></textarea>
+            </div>
             <button id="connectBtn" onclick="connect()">연결</button>
             <button id="disconnectBtn" onclick="disconnect()" disabled>연결 해제</button>
         </div>
@@ -135,6 +139,20 @@
         </div>
 
         <div class="message-form">
+            <h3>테스트 도움말</h3>
+            <div style="background-color: #e7f3ff; padding: 15px; border-radius: 4px; margin: 10px 0;">
+                <h4>사용 방법:</h4>
+                <ol>
+                    <li><strong>JWT 토큰 획득:</strong> 먼저 로그인 API를 호출하여 유효한 JWT 토큰을 받아주세요.</li>
+                    <li><strong>토큰 입력:</strong> 위의 JWT 토큰 필드에 Bearer 제외한 토큰만 입력하세요.</li>
+                    <li><strong>연결:</strong> 연결 버튼을 클릭하여 WebSocket 연결을 시도하세요.</li>
+                    <li><strong>메시지 전송:</strong> 연결 성공 후 메시지를 전송할 수 있습니다.</li>
+                </ol>
+                <p><strong>참고:</strong> 토큰이 유효하지 않거나 권한이 없으면 연결이 실패합니다.</p>
+            </div>
+        </div>
+
+        <div class="message-form">
             <h3>메시지 로그</h3>
             <button onclick="clearMessages()">로그 지우기</button>
             <div id="messages" class="messages"></div>
@@ -147,9 +165,15 @@
 
         function connect() {
             const serverUrl = document.getElementById('serverUrl').value;
+            const jwtToken = document.getElementById('jwtToken').value.trim();
             
             if (!serverUrl) {
                 alert('서버 URL을 입력해주세요.');
+                return;
+            }
+
+            if (!jwtToken) {
+                alert('JWT 토큰을 입력해주세요.');
                 return;
             }
 
@@ -160,8 +184,13 @@
             // 디버그 로그 비활성화 (선택사항)
             stompClient.debug = null;
 
+            // 연결 헤더에 JWT 토큰 포함
+            const headers = {
+                Authorization: 'Bearer ' + jwtToken
+            };
+
             // 연결 시도
-            stompClient.connect({}, function (frame) {
+            stompClient.connect(headers, function (frame) {
                 console.log('Connected: ' + frame);
                 isConnected = true;
                 updateConnectionStatus(true);
@@ -187,7 +216,20 @@
                 addMessage('system', 'WebSocket 연결이 성공했습니다.');
             }, function (error) {
                 console.log('Connection error: ' + error);
-                addMessage('system', '연결 오류: ' + error);
+                
+                // 에러 타입에 따른 메시지 구분
+                let errorMessage = '연결 오류: ';
+                if (error.includes('401') || error.includes('Unauthorized')) {
+                    errorMessage += '인증 실패 - JWT 토큰을 확인해주세요.';
+                } else if (error.includes('403') || error.includes('Forbidden')) {
+                    errorMessage += '권한 없음 - 해당 리소스에 접근할 권한이 없습니다.';
+                } else if (error.includes('Connection refused')) {
+                    errorMessage += '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
+                } else {
+                    errorMessage += error;
+                }
+                
+                addMessage('system', errorMessage);
                 updateConnectionStatus(false);
             });
         }
