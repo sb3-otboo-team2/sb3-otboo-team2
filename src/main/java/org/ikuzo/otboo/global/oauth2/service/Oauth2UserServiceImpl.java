@@ -6,6 +6,7 @@ import org.ikuzo.otboo.domain.user.dto.UserDto;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.mapper.UserMapper;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
+import org.ikuzo.otboo.global.oauth2.dto.GoogleUserInfo;
 import org.ikuzo.otboo.global.oauth2.dto.KakaoUserInfo;
 import org.ikuzo.otboo.global.oauth2.dto.Oauth2UserInfo;
 import org.ikuzo.otboo.global.security.OtbooUserDetails;
@@ -35,6 +36,8 @@ public class Oauth2UserServiceImpl extends DefaultOAuth2UserService {
 
         if (userRequest.getClientRegistration().getRegistrationId().equals("kakao")) {
             oauth2UserInfo = new KakaoUserInfo(oAuth2User.getAttributes());
+        } else if (userRequest.getClientRegistration().getRegistrationId().equals("google")) {
+            oauth2UserInfo = new GoogleUserInfo(oAuth2User.getAttributes());
         }
 
         String email = oauth2UserInfo.getEmail();
@@ -47,7 +50,7 @@ public class Oauth2UserServiceImpl extends DefaultOAuth2UserService {
 
         UserDto userDto = null;
         if (findUser.isEmpty()) {
-            log.info("[Oauth2UserService] Kakao 최초 로그인");
+            log.info("[Oauth2UserService] Oauth2 최초 로그인");
 
             User user = new User(
                 email,

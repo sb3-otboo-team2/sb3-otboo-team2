@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>카카오 로그인 테스트</title>
+    <title>OAuth2 로그인 테스트 (카카오/구글)</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -53,20 +53,21 @@
 </head>
 <body>
     <div class="container">
-        <h1>카카오 로그인 테스트</h1>
+        <h1>OAuth2 로그인 테스트 (카카오/구글)</h1>
         
         <div class="info">
             <h3>사용 방법:</h3>
             <ol>
-                <li>아래 버튼을 클릭하여 카카오 로그인을 시도합니다.</li>
+                <li>아래 버튼을 클릭하여 카카오 또는 구글 로그인을 시도합니다.</li>
                 <li>올바른 URL로 리다이렉션되는지 확인합니다.</li>
-                <li>카카오 로그인 후 JWT 토큰을 받을 수 있는지 확인합니다.</li>
+                <li>로그인 후 JWT 토큰을 받을 수 있는지 확인합니다.</li>
             </ol>
         </div>
 
         <div>
             <h3>로그인 방법 선택:</h3>
             
+            <h4>카카오 로그인:</h4>
             <a href="http://localhost:8080/oauth2/authorization/kakao" class="kakao-btn">
                 🚀 절대 URL로 카카오 로그인
             </a>
@@ -82,6 +83,13 @@
             <button onclick="loginWithDynamicUrl()" class="kakao-btn">
                 🔧 동적 URL로 카카오 로그인
             </button>
+            
+            <br><br>
+            
+            <h4>구글 로그인:</h4>
+            <a href="http://localhost:8080/oauth2/authorization/google" class="kakao-btn" style="background-color: #4285f4;">
+                🔍 구글 로그인
+            </a>
         </div>
 
         <div id="status" style="margin-top: 20px;"></div>
