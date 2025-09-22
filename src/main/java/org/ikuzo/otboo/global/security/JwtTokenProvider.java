@@ -150,4 +150,13 @@ public class JwtTokenProvider {
         refreshCookie.setMaxAge(refreshTokenExpirationMs / 1000);
         return refreshCookie;
     }
+
+    public Cookie generateRefreshTokenExpirationCookie() {
+        Cookie refreshCookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, "");
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(true); // Use HTTPS in production
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(0);
+        return refreshCookie;
+    }
 }

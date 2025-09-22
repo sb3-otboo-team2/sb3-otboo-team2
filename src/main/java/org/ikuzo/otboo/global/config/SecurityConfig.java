@@ -3,10 +3,12 @@ package org.ikuzo.otboo.global.config;
 import org.ikuzo.otboo.domain.user.entity.Role;
 import org.ikuzo.otboo.global.security.JwtAuthenticationFilter;
 import org.ikuzo.otboo.global.security.JwtLoginSuccessHandler;
+import org.ikuzo.otboo.global.security.JwtLogoutHandler;
 import org.ikuzo.otboo.global.security.LoginFailureHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -17,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -28,7 +31,8 @@ public class SecurityConfig {
         HttpSecurity http,
         JwtLoginSuccessHandler jwtLoginSuccessHandler,
         LoginFailureHandler loginFailureHandler,
-        JwtAuthenticationFilter jwtAuthenticationFilter
+        JwtAuthenticationFilter jwtAuthenticationFilter,
+        JwtLogoutHandler jwtLogoutHandler
     ) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
@@ -36,6 +40,12 @@ public class SecurityConfig {
                 .loginProcessingUrl("/api/auth/sign-in")
                 .successHandler(jwtLoginSuccessHandler)
                 .failureHandler(loginFailureHandler)
+            )
+            .logout(logout -> logout
+                .logoutUrl("/api/auth/sign-out")
+                .addLogoutHandler(jwtLogoutHandler)
+                .logoutSuccessHandler(
+                    new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT))
             )
             .authorizeHttpRequests(auth -> auth
 //                .requestMatchers(HttpMethod.POST, "/api/auth/sign-in").permitAll()
