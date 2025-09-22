@@ -129,7 +129,7 @@ public class S3ImageStorage {
 
         // 지원하는 이미지 형식인지 확인
         String[] supportedTypes = {"image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
-            "image/bmp", "image/svg+xml", "image/x-icon", "image/tiff", "application/octet-stream"};
+            "image/bmp", "image/svg+xml", "image/x-icon", "image/tiff"};
         boolean isSupported = false;
         for (String type : supportedTypes) {
             if (type.equalsIgnoreCase(finalMime)) {
@@ -141,7 +141,7 @@ public class S3ImageStorage {
             throw new IllegalArgumentException("지원하지 않는 이미지 형식입니다. 지원 형식: JPEG, JPG, PNG, WebP");
         }
 
-        return extMime;
+        return finalMime;
     }
 
     /**
