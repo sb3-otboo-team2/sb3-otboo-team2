@@ -15,7 +15,6 @@ import reactor.netty.http.client.HttpClient;
 @EnableConfigurationProperties(OpenAiProps.class)
 public class OpenAiClientConfig {
 
-
     @Bean
     WebClient openAiWebClient(WebClient.Builder builder, OpenAiProps props) {
         HttpClient http = HttpClient.create()

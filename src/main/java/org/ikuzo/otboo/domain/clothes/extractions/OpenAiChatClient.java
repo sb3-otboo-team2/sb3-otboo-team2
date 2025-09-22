@@ -12,8 +12,8 @@ import reactor.core.publisher.Mono;
 @Component
 @RequiredArgsConstructor
 public class OpenAiChatClient {
-    private final WebClient openAiWebClient;
 
+    private final WebClient openAiWebClient;
 
     public Mono<String> chatJson(String model, String system, String user) {
         Map<String, Object> body = Map.of(

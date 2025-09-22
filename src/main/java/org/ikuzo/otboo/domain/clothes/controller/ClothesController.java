@@ -120,12 +120,20 @@ public class ClothesController implements ClothesApi {
     @Override
     public Mono<ResponseEntity<ClothesDto>> extractByUrl(
         @RequestParam("url") String url
-    ){
-        return clothingExtractionService.extractFromUrlReactive(url)
+    ) {
+        log.info("[Controller] 구매 링크로 의상 정보 요청 - url: {}", url);
+
+        Mono<ClothesDto> clothesDtoMono = clothingExtractionService.extractFromUrlReactive(url);
+
+        Mono<ResponseEntity<ClothesDto>> responseEntityMono = clothesDtoMono
             .map(ResponseEntity::ok)
             .onErrorResume(e -> {
                 log.error("[Extraction] failed: {}", e.getMessage(), e);
                 return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
             });
+
+        log.info("[Controller] 구매 링크로 의상 정보 완료 - clothesDto: {}", clothesDtoMono);
+
+        return responseEntityMono;
     }
 }

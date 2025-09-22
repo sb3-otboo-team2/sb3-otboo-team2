@@ -4,13 +4,16 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesAttributeWithDefDto;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesDto;
+import org.ikuzo.otboo.domain.clothes.entity.AttributeOption;
+import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
 import org.ikuzo.otboo.domain.clothes.enums.ClothesType;
 import org.ikuzo.otboo.domain.clothes.extractions.OpenAiHtmlExtractor;
-import org.ikuzo.otboo.domain.clothes.infrastructure.ExtractedClothing;
+import org.ikuzo.otboo.domain.clothes.infrastructure.extractClothes;
 import org.ikuzo.otboo.domain.clothes.parser.HtmlParserResolver;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothingExtractionService;
@@ -29,32 +32,39 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
 
     @Override
     public Mono<ClothesDto> extractFromUrlReactive(String url) {
+
+        log.info("[Service] LLM Extractor 시작, URL: {}", url);
+
         URI uri = URI.create(url);
-        return Mono.fromCallable(() -> htmlParserResolver.parse(uri))
+
+        Mono<ClothesDto> result = Mono.fromCallable(() -> htmlParserResolver.parse(uri))
             .flatMap(parsed -> llmExtractor.extract(uri, parsed.fullHtml(), loadAllowedDefs()))
             .map(this::toDto)
             .map(this::enrichAttributesByDefinitions);
+
+        log.info("[Service] LLM Extractor 완료, URL: {}", url);
+
+        return result;
     }
 
-    // DB의 정의/옵션을 LLM 프롬프트에 주입할 용도 (선택)
     private Map<String, List<String>> loadAllowedDefs() {
         return defRepo.findAll().stream().collect(
-            java.util.stream.Collectors.toMap(
-                d -> d.getName(),
-                d -> d.getOptions().stream().map(o -> o.getValue()).toList(),
+            Collectors.toMap(
+                ClothesAttributeDef::getName,
+                d -> d.getOptions().stream().map(AttributeOption::getValue).toList(),
                 (a, b) -> a,
                 java.util.LinkedHashMap::new
             )
         );
     }
 
-    private ClothesDto toDto(ExtractedClothing ex) {
+    private ClothesDto toDto(extractClothes ex) {
         List<ClothesAttributeWithDefDto> attrs = ex.attributes() == null ? List.of() :
             ex.attributes().stream()
                 .map(a -> new ClothesAttributeWithDefDto(
-                    null,                    // definitionId (후처리에서 채움)
+                    null,
                     a.definitionName(),
-                    List.of(),               // selectableValues (후처리에서 채움)
+                    List.of(),
                     a.value()
                 )).toList();
 
@@ -69,9 +79,14 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
     }
 
     private ClothesType safeType(String raw) {
-        if (raw == null) return ClothesType.ETC;
-        try { return ClothesType.valueOf(raw); }
-        catch (IllegalArgumentException e) { return ClothesType.ETC; }
+        if (raw == null) {
+            return ClothesType.ETC;
+        }
+        try {
+            return ClothesType.valueOf(raw);
+        } catch (IllegalArgumentException e) {
+            return ClothesType.ETC;
+        }
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +98,7 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
                 if (defOpt.isPresent()) {
                     var def = defOpt.get();
                     var values = def.getOptions().stream()
-                        .map(o -> o.getValue())
+                        .map(AttributeOption::getValue)
                         .toList();
 
                     mapped.add(new ClothesAttributeWithDefDto(
@@ -93,10 +108,11 @@ public class ClothingExtractionServiceImpl implements ClothingExtractionService 
                         a.value()
                     ));
                 } else {
-                    mapped.add(a); // 정의 없음 → 원본 유지
+                    mapped.add(a);
                 }
             }
         }
-        return new ClothesDto(dto.id(), dto.ownerId(), dto.name(), dto.imageUrl(), dto.type(), mapped);
+        return new ClothesDto(dto.id(), dto.ownerId(), dto.name(), dto.imageUrl(), dto.type(),
+            mapped);
     }
 }

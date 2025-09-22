@@ -57,7 +57,7 @@ public class S3ImageStorage {
             "application/octet-stream"
         );
 
-        // getContentType()이 image/*가 아니거나 null/octal이면 우리가 계산한 값으로 대체
+        // getContentType()이 image/*가 아니거나 null/octal이면 미리 계산한 값으로 대체
         String requestMime = imageFile.getContentType();
         if (requestMime == null || !requestMime.toLowerCase().startsWith("image/")) {
             requestMime = resolvedMime;

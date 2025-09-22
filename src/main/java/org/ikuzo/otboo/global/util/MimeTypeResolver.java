@@ -15,9 +15,7 @@ public final class MimeTypeResolver {
         Map.entry("svg",  "image/svg+xml"),
         Map.entry("ico",  "image/x-icon"),
         Map.entry("tif",  "image/tiff"),
-        Map.entry("tiff", "image/tiff"),
-        Map.entry("avif", "image/avif")
-        // 필요 시 영상/문서 등 다른 확장자도 추가
+        Map.entry("tiff", "image/tiff")
     );
 
     private MimeTypeResolver() {}
