@@ -13,9 +13,11 @@ import org.ikuzo.otboo.domain.clothes.entity.Clothes;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesRepository;
 import org.ikuzo.otboo.domain.feed.dto.FeedCreateRequest;
 import org.ikuzo.otboo.domain.feed.dto.FeedDto;
+import org.ikuzo.otboo.domain.feed.dto.FeedUpdateRequest;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
 import org.ikuzo.otboo.domain.feed.exception.FeedClothesNotFoundException;
 import org.ikuzo.otboo.domain.feed.exception.FeedClothesUnmatchOwner;
+import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
 import org.ikuzo.otboo.domain.feed.mapper.FeedMapper;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
 import org.ikuzo.otboo.domain.feed.repository.dto.FeedSortKey;
@@ -44,6 +46,7 @@ public class FeedServiceImpl implements FeedService {
     @Transactional
     public FeedDto createFeed(FeedCreateRequest req) {
 
+        log.info("[FeedService] Feed 생성 시작 authorId = {}", req.authorId());
         User author = userRepository.findById(req.authorId())
             .orElseThrow(UserNotFoundException::new);
         Weather weather = weatherRepository.findById(req.weatherId())
@@ -93,6 +96,8 @@ public class FeedServiceImpl implements FeedService {
         feed.attachClothes(orderedClothes);
         Feed saved = feedRepository.save(feed);
 
+        log.info("[FeedService] Feed 생성 완료 authorId = {}", req.authorId());
+
         return feedMapper.toDto(saved);
     }
 
@@ -106,6 +111,9 @@ public class FeedServiceImpl implements FeedService {
                                           String keywordLike,
                                           String skyStatusEqual,
                                           String precipitationTypeEqual) {
+
+        log.info("[FeedService] Feed 조회 시작");
+
         int pageLimit = (limit == null || limit <= 0) ? 10 : Math.min(limit, 50);
 
         FeedSortKey sortKey = FeedSortKey.from(sortBy);
@@ -137,6 +145,8 @@ public class FeedServiceImpl implements FeedService {
         long totalCount = feedRepository.countFeeds(keywordLike, skyStatusEqual, precipitationTypeEqual);
         List<FeedDto> data = content.stream().map(feedMapper::toDto).toList();
 
+        log.info("[FeedService] Feed 조회 완료");
+
         return new PageResponse<>(
             data,
             nextCursor,
@@ -146,5 +156,20 @@ public class FeedServiceImpl implements FeedService {
             sortKey == FeedSortKey.CREATED_AT ? "createdAt" : "likeCount",
             ascending ? "ASCENDING" : "DESCENDING"
         );
+    }
+
+    @Override
+    @Transactional
+    public FeedDto updateFeed(UUID feedId, FeedUpdateRequest request) {
+        log.info("[FeedService] Feed 수정 시작 feedId = {}", feedId);
+
+        Feed feed = feedRepository.findById(feedId)
+            .orElseThrow(() -> new FeedNotFoundException(feedId));
+
+        feed.updateContent(request.content());
+
+        log.info("[FeedService] Feed 수정 완료 feedId = {}", feedId);
+
+        return feedMapper.toDto(feed);
     }
 }
