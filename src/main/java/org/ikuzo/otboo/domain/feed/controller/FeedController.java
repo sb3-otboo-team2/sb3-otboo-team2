@@ -31,7 +31,7 @@ public class FeedController {
     public ResponseEntity<PageResponse<FeedDto>> getFeeds(
         @RequestParam(required = false) String cursor,
         @RequestParam(required = false) UUID idAfter,
-        @RequestParam(required = false) Integer limit,
+        @RequestParam(required = false, defaultValue = "10") Integer limit,
         @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
         @RequestParam(required = false, defaultValue = "DESCENDING") String sortDirection,
         @RequestParam(required = false) String keywordLike,
