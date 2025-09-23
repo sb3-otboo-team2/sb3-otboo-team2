@@ -12,10 +12,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ikuzo.otboo.domain.clothes.entity.QAttributeOption;
 import org.ikuzo.otboo.domain.clothes.entity.QClothes;
-import org.ikuzo.otboo.domain.clothes.entity.QClothesAttribute;
-import org.ikuzo.otboo.domain.clothes.entity.QClothesAttributeDef;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
 import org.ikuzo.otboo.domain.feed.entity.QFeed;
 import org.ikuzo.otboo.domain.feed.entity.QFeedClothes;
@@ -45,9 +42,6 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
         QUser author = QUser.user;
         QFeedClothes feedClothes = QFeedClothes.feedClothes;
         QClothes clothes = QClothes.clothes;
-        QClothesAttribute attribute = QClothesAttribute.clothesAttribute;
-        QClothesAttributeDef definition = QClothesAttributeDef.clothesAttributeDef;
-        QAttributeOption option = QAttributeOption.attributeOption;
 
         // where 필터
         BooleanBuilder filter = buildBaseFilter(keywordLike, skyStatusEqual, precipitationTypeEqual,
@@ -63,11 +57,8 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
             .from(feed)
             .leftJoin(feed.weather, weather).fetchJoin()
             .leftJoin(feed.author, author).fetchJoin()
-            .leftJoin(feed.feedClothes, feedClothes).fetchJoin()
-            .leftJoin(feedClothes.clothes, clothes).fetchJoin()
-            .leftJoin(clothes.attributes, attribute)
-            .leftJoin(attribute.definition, definition)
-            .leftJoin(definition.options, option)
+            .leftJoin(feed.feedClothes, feedClothes)
+            .leftJoin(feedClothes.clothes, clothes)
             .where(filter)
             .limit(limit + 1L);
 
