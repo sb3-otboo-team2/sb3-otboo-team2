@@ -172,7 +172,9 @@ public class FeedServiceImpl implements FeedService {
             .orElseThrow(() -> new FeedNotFoundException(feedId));
 
         UUID currentUserId = currentUserId();
-        UUID authorId = feed.getAuthor().getId();
+        User author = feed.getAuthor();
+        UUID authorId = (author != null) ? author.getId() : null;
+
         if (authorId == null || !authorId.equals(currentUserId)) {
             throw new FeedAuthorUnmatchException(authorId);
         }
