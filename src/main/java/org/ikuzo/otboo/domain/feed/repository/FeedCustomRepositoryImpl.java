@@ -53,7 +53,7 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
         BooleanBuilder filter = buildBaseFilter(keywordLike, skyStatusEqual, precipitationTypeEqual,
             feed, weather);
 
-        // 커서 이후 데이터 가저오는 조건 식
+        // 커서 이후 데이터 가져오는 조건 식
         BooleanExpression cursorPredicate = buildCursorPredicate(sortKey, ascending, cursor, idAfter, feed);
         if (cursorPredicate != null) {
             filter.and(cursorPredicate);
