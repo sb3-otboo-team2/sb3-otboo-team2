@@ -14,4 +14,6 @@ public interface NotificationService {
     void create(Set<UUID> receiverIds, String title, String content, Level level);
 
     PageResponse<NotificationDto> getNotifications(Instant cursor, UUID idAfter, int limit);
+
+    void deleteNotification(UUID notificationId);
 }

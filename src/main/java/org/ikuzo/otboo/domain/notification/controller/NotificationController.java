@@ -6,10 +6,7 @@ import org.ikuzo.otboo.domain.notification.service.NotificationService;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
@@ -31,5 +28,11 @@ public class NotificationController {
         PageResponse<NotificationDto> response = notificationService.getNotifications(cursor, idAfter, limit);
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @DeleteMapping("{notificationId}")
+    public ResponseEntity<Void> deleteNotification(@PathVariable UUID notificationId) {
+        notificationService.deleteNotification(notificationId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

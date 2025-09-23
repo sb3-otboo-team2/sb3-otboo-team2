@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth2 로그인 테스트 (카카오/구글)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .kakao-btn {
+            background-color: #FEE500;
+            color: #000000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .kakao-btn:hover {
+            background-color: #FDD835;
+        }
+        .info {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OAuth2 로그인 테스트 (카카오/구글)</h1>
+        
+        <div class="info">
+            <h3>사용 방법:</h3>
+            <ol>
+                <li>아래 버튼을 클릭하여 카카오 또는 구글 로그인을 시도합니다.</li>
+                <li>올바른 URL로 리다이렉션되는지 확인합니다.</li>
+                <li>로그인 후 JWT 토큰을 받을 수 있는지 확인합니다.</li>
+            </ol>
+        </div>
+
+        <div>
+            <h3>로그인 방법 선택:</h3>
+            
+            <h4>카카오 로그인:</h4>
+            <a href="http://localhost:8080/oauth2/authorization/kakao" class="kakao-btn">
+                🚀 절대 URL로 카카오 로그인
+            </a>
+            
+            <br><br>
+            
+            <button onclick="loginWithRelativeUrl()" class="kakao-btn">
+                ⚠️ 상대 URL로 카카오 로그인 (문제 발생)
+            </button>
+            
+            <br><br>
+            
+            <button onclick="loginWithDynamicUrl()" class="kakao-btn">
+                🔧 동적 URL로 카카오 로그인
+            </button>
+            
+            <br><br>
+            
+            <h4>구글 로그인:</h4>
+            <a href="http://localhost:8080/oauth2/authorization/google" class="kakao-btn" style="background-color: #4285f4;">
+                🔍 구글 로그인
+            </a>
+        </div>
+
+        <div id="status" style="margin-top: 20px;"></div>
+        
+        <div id="tokenInfo" style="margin-top: 20px; display: none;">
+            <h3>로그인 정보</h3>
+            <div id="userInfo" class="info"></div>
+            <div id="tokenDisplay" class="info"></div>
+            <button onclick="copyToken()" class="kakao-btn">토큰 복사</button>
+            <button onclick="testWebSocket()" class="kakao-btn">WebSocket 테스트</button>
+        </div>
+    </div>
+
+    <script>
+        function loginWithRelativeUrl() {
+            // 이 방법은 문제가 발생할 수 있습니다
+            window.location.href = '/oauth2/authorization/kakao';
+        }
+
+        function loginWithDynamicUrl() {
+            // 현재 페이지의 호스트를 기반으로 동적으로 URL 생성
+            const currentHost = window.location.origin;
+            const loginUrl = `${currentHost}/oauth2/authorization/kakao`;
+            
+            document.getElementById('status').innerHTML = 
+                `<div class="info">리다이렉션 URL: <strong>${loginUrl}</strong></div>`;
+            
+            window.location.href = loginUrl;
+        }
+
+        // 쿠키에서 값 읽기
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // 토큰 복사
+        function copyToken() {
+            const token = getCookie('accessToken');
+            if (token) {
+                navigator.clipboard.writeText(token).then(() => {
+                    alert('토큰이 클립보드에 복사되었습니다!');
+                });
+            } else {
+                alert('토큰을 찾을 수 없습니다.');
+            }
+        }
+
+        // WebSocket 테스트
+        function testWebSocket() {
+            const token = getCookie('accessToken');
+            if (token) {
+                // WebSocket 테스트 페이지로 이동
+                window.open(`/websocket-test.html?token=${encodeURIComponent(token)}`, '_blank');
+            } else {
+                alert('토큰을 찾을 수 없습니다. 먼저 로그인해주세요.');
+            }
+        }
+
+        // 로그인 정보 표시
+        function displayLoginInfo() {
+            const accessToken = getCookie('accessToken');
+            const userInfo = getCookie('userInfo');
+            
+            if (accessToken && userInfo) {
+                try {
+                    // URL 디코딩 후 JSON 파싱
+                    const decodedUserInfo = decodeURIComponent(userInfo);
+                    const user = JSON.parse(decodedUserInfo);
+                    document.getElementById('userInfo').innerHTML = 
+                        `<strong>사용자 정보:</strong><br>
+                         ID: ${user.id}<br>
+                         이메일: ${user.email}<br>
+                         이름: ${user.name}<br>
+                         역할: ${user.role}`;
+                    
+                    document.getElementById('tokenDisplay').innerHTML = 
+                        `<strong>Access Token:</strong><br>
+                         <textarea readonly style="width: 100%; height: 100px; font-size: 12px;">${accessToken}</textarea>`;
+                    
+                    document.getElementById('tokenInfo').style.display = 'block';
+                } catch (e) {
+                    console.error('사용자 정보 파싱 오류:', e);
+                    console.error('원본 userInfo:', userInfo);
+                }
+            }
+        }
+
+        // 페이지 로드 시 현재 URL 정보 표시 및 로그인 정보 확인
+        window.onload = function() {
+            const currentUrl = window.location.href;
+            const currentOrigin = window.location.origin;
+            
+            document.getElementById('status').innerHTML = 
+                `<div class="info">
+                    <strong>현재 페이지 URL:</strong> ${currentUrl}<br>
+                    <strong>현재 Origin:</strong> ${currentOrigin}<br>
+                    <strong>예상 로그인 URL:</strong> ${currentOrigin}/oauth2/authorization/kakao
+                </div>`;
+            
+            // 로그인 정보가 있으면 표시
+            displayLoginInfo();
+        };
+    </script>
+</body>
+</html>
