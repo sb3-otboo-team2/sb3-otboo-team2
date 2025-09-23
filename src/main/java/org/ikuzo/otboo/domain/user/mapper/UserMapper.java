@@ -35,6 +35,10 @@ public interface UserMapper {
 
     @Named("mapLocation")
     default Location mapLocation(User user) {
+        if (user.getLocationNames() == null || user.getLocationNames().isBlank()) {
+            return null;
+        }
+
         List<String> locationNamesList = parseLocationNames(user.getLocationNames());
 
         return new Location(
