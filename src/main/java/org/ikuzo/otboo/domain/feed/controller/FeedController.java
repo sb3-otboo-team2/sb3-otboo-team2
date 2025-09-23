@@ -57,7 +57,7 @@ public class FeedController {
     }
 
     @DeleteMapping("/{feedId}")
-    public ResponseEntity<FeedDto> delete(
+    public ResponseEntity<Void> delete(
         @NotNull @PathVariable UUID feedId
     ) {
         feedService.deleteFeed(feedId);
