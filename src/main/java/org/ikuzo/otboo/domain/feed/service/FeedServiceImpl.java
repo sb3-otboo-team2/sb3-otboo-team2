@@ -15,6 +15,7 @@ import org.ikuzo.otboo.domain.feed.dto.FeedCreateRequest;
 import org.ikuzo.otboo.domain.feed.dto.FeedDto;
 import org.ikuzo.otboo.domain.feed.dto.FeedUpdateRequest;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
+import org.ikuzo.otboo.domain.feed.exception.FeedAuthorUnmatchException;
 import org.ikuzo.otboo.domain.feed.exception.FeedClothesNotFoundException;
 import org.ikuzo.otboo.domain.feed.exception.FeedClothesUnmatchOwner;
 import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
@@ -28,6 +29,10 @@ import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.ikuzo.otboo.domain.weather.exception.WeatherNotFoundException;
 import org.ikuzo.otboo.domain.weather.repository.WeatherRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
+import org.ikuzo.otboo.global.security.OtbooUserDetails;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -166,10 +171,25 @@ public class FeedServiceImpl implements FeedService {
         Feed feed = feedRepository.findById(feedId)
             .orElseThrow(() -> new FeedNotFoundException(feedId));
 
+        UUID currentUserId = currentUserId();
+        UUID authorId = feed.getAuthor().getId();
+        if (authorId == null || !authorId.equals(currentUserId)) {
+            throw new FeedAuthorUnmatchException(authorId);
+        }
+
         feed.updateContent(request.content());
 
         log.info("[FeedService] Feed 수정 완료 feedId = {}", feedId);
 
         return feedMapper.toDto(feed);
+    }
+
+    // 로그인한 사용자 ID 가져오는 메서드
+    private UUID currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof OtbooUserDetails details)) {
+            throw new AuthorizationDeniedException("인증 정보가 없습니다.");
+        }
+        return details.getUserDto().id();
     }
 }
