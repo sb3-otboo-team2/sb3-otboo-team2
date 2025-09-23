@@ -18,12 +18,14 @@ import org.ikuzo.otboo.domain.feed.exception.FeedClothesNotFoundException;
 import org.ikuzo.otboo.domain.feed.exception.FeedClothesUnmatchOwner;
 import org.ikuzo.otboo.domain.feed.mapper.FeedMapper;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
+import org.ikuzo.otboo.domain.feed.repository.dto.FeedSortKey;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.ikuzo.otboo.domain.weather.exception.WeatherNotFoundException;
 import org.ikuzo.otboo.domain.weather.repository.WeatherRepository;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,5 +94,57 @@ public class FeedServiceImpl implements FeedService {
         Feed saved = feedRepository.save(feed);
 
         return feedMapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<FeedDto> getFeeds(String cursor,
+                                          UUID idAfter,
+                                          Integer limit,
+                                          String sortBy,
+                                          String sortDirection,
+                                          String keywordLike,
+                                          String skyStatusEqual,
+                                          String precipitationTypeEqual) {
+        int pageLimit = (limit == null || limit <= 0) ? 10 : Math.min(limit, 50);
+
+        FeedSortKey sortKey = FeedSortKey.from(sortBy);
+        boolean ascending = "ASCENDING".equalsIgnoreCase(sortDirection);
+
+        List<Feed> feeds = feedRepository.findFeedsWithCursor(cursor, idAfter, pageLimit, sortKey, ascending,
+            keywordLike, skyStatusEqual, precipitationTypeEqual);
+
+        boolean hasNext = feeds.size() > pageLimit;
+        List<Feed> content = hasNext ? feeds.subList(0, pageLimit) : feeds;
+
+        String nextCursor = null;
+        UUID nextIdAfter = null;
+
+        if (hasNext && !content.isEmpty()) {
+            Feed last = content.get(content.size() - 1);
+            if (sortKey == FeedSortKey.CREATED_AT) {
+                if (last.getCreatedAt() != null) {
+                    nextCursor = last.getCreatedAt().toString();
+                } else {
+                    nextCursor = null;
+                }
+            } else {
+                nextCursor = String.valueOf(last.getLikeCount());
+            }
+            nextIdAfter = last.getId();
+        }
+
+        long totalCount = feedRepository.countFeeds(keywordLike, skyStatusEqual, precipitationTypeEqual);
+        List<FeedDto> data = content.stream().map(feedMapper::toDto).toList();
+
+        return new PageResponse<>(
+            data,
+            nextCursor,
+            nextIdAfter,
+            hasNext,
+            totalCount,
+            sortKey == FeedSortKey.CREATED_AT ? "createdAt" : "likeCount",
+            ascending ? "ASCENDING" : "DESCENDING"
+        );
     }
 }
