@@ -10,6 +10,7 @@ import org.ikuzo.otboo.domain.feed.dto.FeedUpdateRequest;
 import org.ikuzo.otboo.domain.feed.service.FeedService;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,5 +54,13 @@ public class FeedController {
         @Valid @RequestBody FeedUpdateRequest request
     ) {
         return ResponseEntity.ok(feedService.updateFeed(feedId, request));
+    }
+
+    @DeleteMapping("/{feedId}")
+    public ResponseEntity<FeedDto> delete(
+        @NotNull @PathVariable UUID feedId
+    ) {
+        feedService.deleteFeed(feedId);
+        return ResponseEntity.noContent().build();
     }
 }
