@@ -5,7 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
-import java.time.Instant;
+import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,7 +30,7 @@ public class User extends BaseUpdatableEntity {
     private Gender gender;
 
     @Column
-    private Instant birthDate;
+    private LocalDate birthDate;
 
     @Column
     private Double latitude;

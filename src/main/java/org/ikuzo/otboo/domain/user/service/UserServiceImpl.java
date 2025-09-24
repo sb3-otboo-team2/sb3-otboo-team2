@@ -1,11 +1,14 @@
 package org.ikuzo.otboo.domain.user.service;
 
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.domain.user.dto.ProfileDto;
 import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserDto;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.exception.UserAlreadyExistsException;
+import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.mapper.UserMapper;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,5 +45,12 @@ public class UserServiceImpl implements UserService {
         log.info("사용자 생성 완료: id={}, name={}", user.getId(), user.getName());
 
         return userMapper.toDto(user);
+    }
+
+    @Override
+    public ProfileDto find(UUID userId) {
+        return userRepository.findById(userId)
+            .map(userMapper::toProfileDto)
+            .orElseThrow(() -> UserNotFoundException.withId(userId));
     }
 }
