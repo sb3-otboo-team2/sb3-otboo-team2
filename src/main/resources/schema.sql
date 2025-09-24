@@ -40,7 +40,6 @@ CREATE TABLE "feeds"
     "updated_at"    TIMESTAMPTZ  NOT NULL,
     "comment_count" INTEGER      NOT NULL DEFAULT 0,
     "like_count"    BIGINT       NOT NULL DEFAULT 0,
-    "liked_by_me"   BOOLEAN      NOT NULL DEFAULT FALSE,
     CONSTRAINT "PK_FEEDS" PRIMARY KEY ("id"),
     CONSTRAINT "FK_FEEDS_USERS" FOREIGN KEY ("author_id") REFERENCES "users" ("id") ON DELETE CASCADE
 );
@@ -70,12 +69,12 @@ DROP TABLE IF EXISTS "notifications" CASCADE;
 
 CREATE TABLE "notifications"
 (
-    "id"         UUID         NOT NULL,
+    "id"          UUID         NOT NULL,
     "receiver_id" UUID         NOT NULL,
-    "title"      VARCHAR(100) NOT NULL,
-    "content"    VARCHAR(100) NOT NULL,
-    "level"      VARCHAR(10)  NOT NULL,
-    "created_at" TIMESTAMPTZ  NOT NULL,
+    "title"       VARCHAR(100) NOT NULL,
+    "content"     VARCHAR(100) NOT NULL,
+    "level"       VARCHAR(10)  NOT NULL,
+    "created_at"  TIMESTAMPTZ  NOT NULL,
     CONSTRAINT "PK_NOTIFICATIONS" PRIMARY KEY ("id"),
     CONSTRAINT "FK_NOTIFICATIONS_RECEIVER" FOREIGN KEY ("receiver_id") REFERENCES "users" ("id") ON DELETE CASCADE,
     CONSTRAINT "CHK_NOTIFICATIONS_LEVEL" CHECK ("level" IN ('INFO', 'WARNING', 'ERROR'))
@@ -307,12 +306,14 @@ ALTER TABLE "recommendation_clothes"
 -- CLOTHES TYPE CHECK 추가
 -- ===============================
 
-ALTER TABLE "clothes" DROP CONSTRAINT IF EXISTS "CHK_CLOTHES_TYPE";
+ALTER TABLE "clothes"
+    DROP CONSTRAINT IF EXISTS "CHK_CLOTHES_TYPE";
 
-ALTER TABLE "clothes" ADD CONSTRAINT "CHK_CLOTHES_TYPE"
-    CHECK ("type" IN (
-                      'TOP','BOTTOM','DRESS','OUTER','UNDERWEAR',
-                      'ACCESSORY','SHOES','SOCKS','HAT','BAG','SCARF','ETC'
-        ));
+ALTER TABLE "clothes"
+    ADD CONSTRAINT "CHK_CLOTHES_TYPE"
+        CHECK ("type" IN (
+                          'TOP', 'BOTTOM', 'DRESS', 'OUTER', 'UNDERWEAR',
+                          'ACCESSORY', 'SHOES', 'SOCKS', 'HAT', 'BAG', 'SCARF', 'ETC'
+            ));
 
 COMMIT;

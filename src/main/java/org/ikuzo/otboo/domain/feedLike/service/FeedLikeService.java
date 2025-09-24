@@ -1,0 +1,8 @@
+package org.ikuzo.otboo.domain.feedLike.service;
+
+import java.util.UUID;
+
+public interface FeedLikeService {
+
+    void create(UUID feedId);
+}
