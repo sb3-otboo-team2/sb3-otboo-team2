@@ -36,6 +36,15 @@ spring:
             token-uri: https://kauth.kakao.com/oauth/token
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
+  cache:
+    type: caffeine
+    cache-names:
+      - notifications
+    caffeine:
+      spec: >
+        maximumSize=100,
+        expireAfterAccess=600s,
+        recordStats
 otboo:
   jwt:
     access-token:
