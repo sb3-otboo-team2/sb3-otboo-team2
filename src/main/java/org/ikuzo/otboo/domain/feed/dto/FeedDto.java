@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
+import org.ikuzo.otboo.domain.recommendation.dto.OotdDto;
 import org.ikuzo.otboo.domain.weather.dto.WeatherDto;
 
 @Builder(toBuilder = true)

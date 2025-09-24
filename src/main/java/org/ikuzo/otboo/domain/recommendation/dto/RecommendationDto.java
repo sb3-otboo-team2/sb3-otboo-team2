@@ -3,7 +3,6 @@ package org.ikuzo.otboo.domain.recommendation.dto;
 import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
-import org.ikuzo.otboo.domain.feed.dto.OotdDto;
 
 @Builder
 public record RecommendationDto(

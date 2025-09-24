@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.clothes.entity.Clothes;
 import org.ikuzo.otboo.domain.clothes.mapper.ClothesMapper;
-import org.ikuzo.otboo.domain.feed.dto.OotdDto;
+import org.ikuzo.otboo.domain.recommendation.dto.OotdDto;
 import org.ikuzo.otboo.domain.recommendation.dto.RecommendationDto;
 import org.ikuzo.otboo.domain.recommendation.service.RecommendationService;
 import org.ikuzo.otboo.domain.recommendation.service.engine.RecommendationEngine;
