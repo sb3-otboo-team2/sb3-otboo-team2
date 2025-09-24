@@ -18,6 +18,9 @@ import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.domain.follow.exception.FollowAlreadyException;
 import org.ikuzo.otboo.domain.follow.exception.FollowSelfNotAllowException;
 import org.ikuzo.otboo.global.event.message.FollowCreatedEvent;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
@@ -28,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.file.AccessDeniedException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,7 +44,7 @@ public class FollowServiceImpl implements FollowService {
     private final UserRepository userRepository;
     private final FollowMapper followMapper;
     private final ApplicationEventPublisher eventPublisher;
-
+    private final CacheManager cacheManager;
 
     /**
      * 팔로우 등록
@@ -80,6 +84,8 @@ public class FollowServiceImpl implements FollowService {
 
         FollowDto dto = followMapper.toDto(savedFollow, followeeSummary, followerSummary);
 
+        evictFollowCaches(followeeId, followerId);
+
         eventPublisher.publishEvent(
             new FollowCreatedEvent(
                 dto,
@@ -97,6 +103,7 @@ public class FollowServiceImpl implements FollowService {
      */
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "followSummary", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
     public FollowSummaryDto followSummary(UUID userId) {
         log.info("[FollowService] followSummary 팔로우 요약 정보 userId: {}", userId);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -136,6 +143,11 @@ public class FollowServiceImpl implements FollowService {
      */
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(
+        cacheNames = "followers",
+        key = "#followeeId",
+        condition = "#cursor == null && #idAfter == null && !T(org.springframework.util.StringUtils).hasText(#nameLike)"
+    )
     public PageResponse<FollowDto> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         log.info("[FollowService] 팔로워 목록 조회 서비스 진입");
         List<Follow> followers = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "follower");
@@ -187,6 +199,11 @@ public class FollowServiceImpl implements FollowService {
      */
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(
+        cacheNames = "followings",
+        key = "#followeeId",
+        condition = "#cursor == null && #idAfter == null && !T(org.springframework.util.StringUtils).hasText(#nameLike)"
+    )
     public PageResponse<FollowDto> getFollowings(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         log.info("[FollowService] 팔로잉 목록 조회 서비스 진입");
         List<Follow> followings = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "following");
@@ -236,7 +253,18 @@ public class FollowServiceImpl implements FollowService {
             throw new AuthorizationDeniedException("팔로우를 취소할 권한이 없습니다.");
         }
 
+        UUID followerId = follow.getFollower().getId();
+        UUID followeeId = follow.getFollowing().getId();
+
         followRepository.delete(follow);
+
+        evictFollowCaches(followeeId, followerId);
+
         log.info("[FollowService] 팔로우 취소 완료");
+    }
+
+    private void evictFollowCaches(UUID followeeId, UUID followerId) {
+        Objects.requireNonNull(cacheManager.getCache("followers")).evict(followeeId);
+        Objects.requireNonNull(cacheManager.getCache("followings")).evict(followerId);
     }
 }
