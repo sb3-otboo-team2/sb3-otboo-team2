@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.ikuzo.otboo.domain.user.dto.Location;
 import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 
 @Entity
@@ -51,7 +52,7 @@ public class User extends BaseUpdatableEntity {
     private Integer temperatureSensitivity = 3;
 
     @Column(columnDefinition = "TEXT")
-    private String profileImageUrl;
+    public String profileImageUrl;
 
     @Column(nullable = false)
     private Boolean locked = false;
@@ -79,5 +80,46 @@ public class User extends BaseUpdatableEntity {
         this.profileImageUrl = profileImageUrl;
         this.provider = provider;
         this.providerId = providerId;
+    }
+
+    public void update(String newName, Gender newGender, LocalDate newBirthDate, Location newLocation, Integer newTemperatureSensitivity, String newProfile) {
+        if (newName != null && !newName.equals(this.name)) {
+            this.name = newName;
+        }
+        if (newGender != null && !newGender.equals(this.gender)) {
+            this.gender = newGender;
+        }
+        if (newBirthDate != null && !newBirthDate.equals(this.birthDate)) {
+            this.birthDate = newBirthDate;
+        }
+        if (newLocation != null) {
+            updateLocation(newLocation);
+        }
+        if (newTemperatureSensitivity != null && !newBirthDate.equals(this.temperatureSensitivity)) {
+            this.temperatureSensitivity = newTemperatureSensitivity;
+        }
+        if (newProfile != null) {
+            this.profileImageUrl = newProfile;
+        }
+    }
+
+    private void updateLocation(Location newLocation) {
+        if (newLocation.latitude() != null && !newLocation.latitude().equals(this.latitude)) {
+            this.latitude = newLocation.latitude();
+        }
+        if (newLocation.longitude() != null && !newLocation.longitude().equals(this.longitude)) {
+            this.longitude = newLocation.longitude();
+        }
+        if (newLocation.x() != null && !newLocation.x().equals(this.x)) {
+            this.x = newLocation.x();
+        }
+        if (newLocation.y() != null && !newLocation.y().equals(this.y)) {
+            this.y = newLocation.y();
+        }
+
+        String newLocationNames = newLocation.getLocationNamesAsString();
+        if (newLocationNames != null && !newLocationNames.equals(this.locationNames)) {
+            this.locationNames = newLocationNames;
+        }
     }
 }
