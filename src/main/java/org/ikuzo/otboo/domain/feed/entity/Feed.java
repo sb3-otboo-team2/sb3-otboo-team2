@@ -59,9 +59,6 @@ public class Feed extends BaseUpdatableEntity {
         }
     }
 
-    @Transient
-    private Boolean likedByMe;
-
     public void updateContent(String content) {
         this.content = content;
     }
@@ -84,10 +81,6 @@ public class Feed extends BaseUpdatableEntity {
         if (this.likeCount > 0) {
             this.likeCount--;
         }
-    }
-
-    public void setLikedByMe(Boolean likedByMe) {
-        this.likedByMe = likedByMe;
     }
 
     public void attachAuthor(User author) {

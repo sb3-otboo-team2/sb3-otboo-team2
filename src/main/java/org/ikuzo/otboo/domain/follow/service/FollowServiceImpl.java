@@ -84,7 +84,7 @@ public class FollowServiceImpl implements FollowService {
 
         FollowDto dto = followMapper.toDto(savedFollow, followeeSummary, followerSummary);
 
-        evictFollowCaches(followeeId, followerId);
+        evictFollowCaches(followeeId, followee.getEmail(), followerId, follower.getEmail());
 
         eventPublisher.publishEvent(
             new FollowCreatedEvent(
@@ -103,7 +103,10 @@ public class FollowServiceImpl implements FollowService {
      */
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "followSummary", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
+    @Cacheable(
+        cacheNames = "followSummary",
+        key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '_' + #userId"
+    )
     public FollowSummaryDto followSummary(UUID userId) {
         log.info("[FollowService] followSummary 팔로우 요약 정보 userId: {}", userId);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -258,13 +261,19 @@ public class FollowServiceImpl implements FollowService {
 
         followRepository.delete(follow);
 
-        evictFollowCaches(followeeId, followerId);
+        evictFollowCaches(followeeId, follow.getFollowing().getEmail(), followerId, follow.getFollower().getEmail());
 
         log.info("[FollowService] 팔로우 취소 완료");
     }
 
-    private void evictFollowCaches(UUID followeeId, UUID followerId) {
+    private void evictFollowCaches(UUID followeeId, String followeeEmail, UUID followerId, String followerEmail) {
         Objects.requireNonNull(cacheManager.getCache("followers")).evict(followeeId);
         Objects.requireNonNull(cacheManager.getCache("followings")).evict(followerId);
+
+        Objects.requireNonNull(cacheManager.getCache("followSummary"))
+            .evict(followerEmail + "_" + followeeId);
+
+        Objects.requireNonNull(cacheManager.getCache("followSummary"))
+            .evict(followeeEmail + "_" + followerId);
     }
 }
