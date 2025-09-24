@@ -95,7 +95,7 @@ public class User extends BaseUpdatableEntity {
         if (newLocation != null) {
             updateLocation(newLocation);
         }
-        if (newTemperatureSensitivity != null && !newBirthDate.equals(this.temperatureSensitivity)) {
+        if (newTemperatureSensitivity != null && !newTemperatureSensitivity.equals(this.temperatureSensitivity)) {
             this.temperatureSensitivity = newTemperatureSensitivity;
         }
         if (newProfile != null) {
