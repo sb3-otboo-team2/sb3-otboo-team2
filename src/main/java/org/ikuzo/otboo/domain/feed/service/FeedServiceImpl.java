@@ -22,6 +22,7 @@ import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
 import org.ikuzo.otboo.domain.feed.mapper.FeedMapper;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
 import org.ikuzo.otboo.domain.feed.repository.dto.FeedSortKey;
+import org.ikuzo.otboo.domain.feedLike.repository.FeedLikeRepository;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
@@ -46,6 +47,7 @@ public class FeedServiceImpl implements FeedService {
     private final WeatherRepository weatherRepository;
     private final ClothesRepository clothesRepository;
     private final FeedMapper feedMapper;
+    private final FeedLikeRepository feedLikeRepository;
 
     @Override
     @Transactional
@@ -95,7 +97,6 @@ public class FeedServiceImpl implements FeedService {
             .author(author)
             .weather(weather)
             .content(req.content())
-            .likedByMe(false)
             .build();
 
         feed.attachClothes(orderedClothes);
@@ -147,8 +148,34 @@ public class FeedServiceImpl implements FeedService {
             nextIdAfter = last.getId();
         }
 
+        UUID currentUserId = currentUserId();
+        Set<UUID> likedFeedIds = Set.of();
+        boolean hasCurrentUser;
+
+        if (currentUserId != null) {
+            hasCurrentUser = true;
+        } else {
+            hasCurrentUser = false;
+        }
+
+        if (hasCurrentUser && !content.isEmpty()) {
+            List<UUID> feedIds = content.stream()
+                .map(Feed::getId)
+                .toList();
+
+            likedFeedIds = feedLikeRepository.findByUserIdAndFeedIdIn(currentUserId, feedIds).stream()
+                .map(feedLike -> feedLike.getFeed().getId())
+                .collect(Collectors.toSet());
+        }
+
+        Set<UUID> finalLikedFeedIds = likedFeedIds;
+        boolean finalHasCurrentUser = hasCurrentUser;
+
         long totalCount = feedRepository.countFeeds(keywordLike, skyStatusEqual, precipitationTypeEqual);
-        List<FeedDto> data = content.stream().map(feedMapper::toDto).toList();
+        List<FeedDto> data = content.stream()
+            .map(feedMapper::toDto)
+            .map(dto -> dto.withLikedByMe(finalHasCurrentUser && finalLikedFeedIds.contains(dto.id())))
+            .toList();
 
         log.info("[FeedService] Feed 조회 완료");
 
