@@ -11,6 +11,7 @@ import org.ikuzo.otboo.domain.clothes.dto.ClothesDto;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesCreateRequest;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesUpdateRequest;
 import org.ikuzo.otboo.domain.clothes.service.ClothesService;
+import org.ikuzo.otboo.domain.clothes.service.ClothingExtractionService;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Validated
@@ -35,6 +37,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ClothesController implements ClothesApi {
 
     private final ClothesService clothesService;
+    private final ClothingExtractionService clothingExtractionService;
 
     @GetMapping
     @Override
@@ -108,5 +111,26 @@ public class ClothesController implements ClothesApi {
         log.info("[Controller] 의상 삭제 완료 - clothesId: {}", clothesId);
 
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @GetMapping(
+        value = "/extractions",
+        produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @Override
+    public Mono<ResponseEntity<ClothesDto>> extractByUrl(
+        @RequestParam("url") String url
+    ) {
+
+        return clothingExtractionService.extractFromUrlReactive(url)
+            .doOnSubscribe(s -> log.info("[Controller] 구매 링크로 의상 정보 요청 - url: {}", url))
+            .doOnSuccess(dto -> log.info("[Controller] 구매 링크로 의상 정보 완료 - name: {}",
+                dto != null ? dto.name() : null))
+            .doOnError(e -> log.error("[Controller] 의상 정보 추출 실패 - url: {}, err: {}",
+                url, e.toString(), e))
+            .doFinally(sig -> log.info("[Controller] 요청 종료 ({}) - url: {}", sig, url))
+            .map(ResponseEntity::ok)
+            .onErrorResume(e -> Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build()));
+
     }
 }

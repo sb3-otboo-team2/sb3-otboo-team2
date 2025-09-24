@@ -15,6 +15,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 @Slf4j
 @Component
 public class S3ImageStorage {
+
     private final S3Client s3Client;
 
     @Value("${AWS_S3_BUCKET}")
@@ -29,7 +30,8 @@ public class S3ImageStorage {
 
     /**
      * 이미지 파일을 S3에 업로드
-     * @param imageFile 업로드할 이미지 파일
+     *
+     * @param imageFile  업로드할 이미지 파일
      * @param folderPath S3 내 저장 경로 (예: "profileImage/")
      * @return S3에 저장된 이미지 URL
      */
@@ -38,23 +40,31 @@ public class S3ImageStorage {
             imageFile.getOriginalFilename(), imageFile.getSize());
 
         // 파일 유효성 검증
-        validateImageFile(imageFile);
+        String finalMime = validateImageFile(imageFile);
 
         // 고유한 파일명 생성 (UUID + 타임스탬프)
         String originalFileName = imageFile.getOriginalFilename();
         if (originalFileName == null || originalFileName.isBlank()) {
             originalFileName = "default.jpg";
         }
-        String uniqueFileName = generateUniqueFileName(originalFileName);
+
+        String safeFileName = safeFileNameFromUrl(originalFileName);
+        String uniqueFileName = generateUniqueFileName(safeFileName);
 
         // S3 저장 경로 생성 (폴더경로 + 파일명)
         String s3Key = folderPath + uniqueFileName;
+
+        // getContentType()이 image/*가 아니거나 null/octal이면 미리 계산한 값으로 대체
+        String requestMime = imageFile.getContentType();
+        if (requestMime == null || !requestMime.toLowerCase().startsWith("image/")) {
+            requestMime = finalMime;
+        }
 
         // S3 업로드 요청 객체 생성
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
             .bucket(bucketName)
             .key(s3Key)
-            .contentType(imageFile.getContentType())
+            .contentType(requestMime)
             .contentLength(imageFile.getSize())
             .build();
 
@@ -78,10 +88,21 @@ public class S3ImageStorage {
         }
     }
 
+    private String safeFileNameFromUrl(String url) {
+        String path = (url == null) ? "" : url;
+        int q = path.indexOf('?');
+        if (q >= 0) path = path.substring(0, q);        // ? 이하 제거
+        // 마지막 / 뒤만 취해서 파일명만 사용
+        String fileName = path.substring(path.lastIndexOf('/') + 1);
+        // 너무 길거나 위험한 문자 정리
+        fileName = fileName.replaceAll("[^A-Za-z0-9._-]", "_");
+        return fileName;
+    }
+
     /**
      * 이미지 파일 유효성 검증
      */
-    private void validateImageFile(MultipartFile file) {
+    private String validateImageFile(MultipartFile file) {
         // 파일이 비어있는지 확인
         if (file.isEmpty()) {
             throw new IllegalArgumentException("업로드할 이미지 파일이 없습니다.");
@@ -89,29 +110,38 @@ public class S3ImageStorage {
 
         // 파일 타입이 이미지인지 확인
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("이미지 파일만 업로드 가능합니다. 현재 타입: " + contentType);
+        String fileName = file.getOriginalFilename();
+        String extMime = MimeTypeResolver.resolveFromExtension(safeFileNameFromUrl(fileName),
+            "application/octet-stream");
+        boolean declaredImage = contentType != null && contentType.startsWith("image/");
+        boolean inferredImage = extMime != null && extMime.startsWith("image/");
+        if (!(declaredImage || inferredImage)) {
+            throw new IllegalArgumentException(
+                "이미지 파일만 업로드 가능합니다. 현재 타입: " + contentType + ", 추정: " + extMime);
         }
+        String finalMime = (declaredImage ? contentType : extMime).toLowerCase();
 
-        // 파일 크기 제한 (5MB)
-        long maxSizeInBytes = 5 * 1024 * 1024;
+        // 파일 크기 제한 (10MB)
+        long maxSizeInBytes = 10 * 1024 * 1024;
         if (file.getSize() > maxSizeInBytes) {
-            throw new IllegalArgumentException("이미지 파일 크기는 5MB를 초과할 수 없습니다. 현재 크기: " + file.getSize() + "바이트");
+            throw new IllegalArgumentException("이미지 파일 크기는 10MB를 초과할 수 없습니다. 현재 크기: " + file.getSize() + "바이트");
         }
 
         // 지원하는 이미지 형식인지 확인
-        String[] supportedTypes = {"image/jpeg", "image/jpg", "image/png", "image/webp"};
+        String[] supportedTypes = {"image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+            "image/bmp", "image/x-icon", "image/tiff"};
         boolean isSupported = false;
         for (String type : supportedTypes) {
-            if (type.equals(contentType)) {
+            if (type.equalsIgnoreCase(finalMime)) {
                 isSupported = true;
                 break;
             }
         }
-
         if (!isSupported) {
-            throw new IllegalArgumentException("지원하지 않는 이미지 형식입니다. 지원 형식: JPEG, JPG, PNG, WebP");
+            throw new IllegalArgumentException("지원하지 않는 이미지 형식입니다. 지원 형식: JPEG(JPG), PNG, GIF, WebP, BMP, ICO, TIFF");
         }
+
+        return finalMime;
     }
 
     /**
