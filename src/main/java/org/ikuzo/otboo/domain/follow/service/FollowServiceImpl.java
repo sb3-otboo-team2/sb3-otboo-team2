@@ -103,7 +103,7 @@ public class FollowServiceImpl implements FollowService {
      */
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "followSummary", key = "#userId")
+    @Cacheable(cacheNames = "followSummary", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
     public FollowSummaryDto followSummary(UUID userId) {
         log.info("[FollowService] followSummary 팔로우 요약 정보 userId: {}", userId);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -143,7 +143,11 @@ public class FollowServiceImpl implements FollowService {
      */
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "followers", key = "#followeeId")
+    @Cacheable(
+        cacheNames = "followers",
+        key = "#followeeId",
+        condition = "#cursor == null && #idAfter == null && !T(org.springframework.util.StringUtils).hasText(#nameLike)"
+    )
     public PageResponse<FollowDto> getFollowers(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         log.info("[FollowService] 팔로워 목록 조회 서비스 진입");
         List<Follow> followers = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "follower");
@@ -195,7 +199,11 @@ public class FollowServiceImpl implements FollowService {
      */
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "followings", key = "#followeeId")
+    @Cacheable(
+        cacheNames = "followings",
+        key = "#followeeId",
+        condition = "#cursor == null && #idAfter == null && !T(org.springframework.util.StringUtils).hasText(#nameLike)"
+    )
     public PageResponse<FollowDto> getFollowings(UUID followeeId, String cursor, UUID idAfter, int limit, String nameLike) {
         log.info("[FollowService] 팔로잉 목록 조회 서비스 진입");
         List<Follow> followings = followRepository.getFollows(followeeId, cursor, idAfter, limit, nameLike, "following");
@@ -258,7 +266,5 @@ public class FollowServiceImpl implements FollowService {
     private void evictFollowCaches(UUID followeeId, UUID followerId) {
         Objects.requireNonNull(cacheManager.getCache("followers")).evict(followeeId);
         Objects.requireNonNull(cacheManager.getCache("followings")).evict(followerId);
-        Objects.requireNonNull(cacheManager.getCache("followSummary")).evict(followeeId);
-        Objects.requireNonNull(cacheManager.getCache("followSummary")).evict(followerId);
     }
 }
