@@ -8,7 +8,10 @@ import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,24 +50,49 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
         BooleanBuilder filter = buildBaseFilter(keywordLike, skyStatusEqual, precipitationTypeEqual,
             feed, weather);
 
-        // 커서 이후 데이터 가져오는 조건 식
+        // 커서 이후 데이터 가저오는 조건 식
         BooleanExpression cursorPredicate = buildCursorPredicate(sortKey, ascending, cursor, idAfter, feed);
         if (cursorPredicate != null) {
             filter.and(cursorPredicate);
+        }
+
+        JPAQuery<UUID> idQuery = queryFactory.select(feed.id)
+            .from(feed)
+            .leftJoin(feed.weather, weather)
+            .where(filter)
+            .limit(limit + 1L);
+
+        applyOrder(idQuery, sortKey, ascending, feed);
+
+        List<UUID> feedIds = idQuery.fetch();
+        if (feedIds.isEmpty()) {
+            return List.of();
         }
 
         JPAQuery<Feed> query = queryFactory.selectDistinct(feed)
             .from(feed)
             .leftJoin(feed.weather, weather).fetchJoin()
             .leftJoin(feed.author, author).fetchJoin()
-            .leftJoin(feed.feedClothes, feedClothes)
-            .leftJoin(feedClothes.clothes, clothes)
-            .where(filter)
-            .limit(limit + 1L);
+            .leftJoin(feed.feedClothes, feedClothes).fetchJoin()
+            .leftJoin(feedClothes.clothes, clothes).fetchJoin()
+            .where(feed.id.in(feedIds));
 
-        applyOrder(query, sortKey, ascending, feed);
+        List<Feed> feeds = query.fetch();
 
-        return query.fetch();
+        Map<UUID, Feed> feedById = new HashMap<>();
+        for (Feed feedEntity : feeds) {
+            feedById.put(feedEntity.getId(), feedEntity);
+        }
+
+        List<Feed> orderedFeeds = new ArrayList<>(feedIds.size());
+        for (UUID feedId : feedIds) {
+            Feed feedEntity = feedById.get(feedId);
+            if (feedEntity != null) {
+                orderedFeeds.add(feedEntity);
+            }
+        }
+
+        return orderedFeeds;
     }
 
     @Override
@@ -155,7 +183,7 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
     }
 
     // 정렬 조건 적용하는 메서드
-    private void applyOrder(JPAQuery<Feed> query, FeedSortKey sortKey, boolean ascending, QFeed feed) {
+    private void applyOrder(JPAQuery<?> query, FeedSortKey sortKey, boolean ascending, QFeed feed) {
         if (sortKey == FeedSortKey.CREATED_AT) {
             OrderSpecifier<Instant> primary = ascending ? feed.createdAt.asc() : feed.createdAt.desc();
             OrderSpecifier<UUID> secondary = ascending ? feed.id.asc() : feed.id.desc();
