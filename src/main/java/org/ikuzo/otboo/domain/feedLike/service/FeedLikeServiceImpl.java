@@ -4,6 +4,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
+import org.ikuzo.otboo.domain.feed.exception.FeedLikeAlreadyExistsException;
 import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
 import org.ikuzo.otboo.domain.feedLike.entity.FeedLike;
@@ -34,7 +35,7 @@ public class FeedLikeServiceImpl implements FeedLikeService {
         UUID userId = currentUserId();
 
         if (feedLikeRepository.existsByUser_IdAndFeed_Id(userId, feedId)) {
-            throw new IllegalStateException("이미 좋아요를 누른 피드입니다.");
+            throw FeedLikeAlreadyExistsException.with(feedId, userId);
         }
 
         User user = userRepository.findById(userId)
