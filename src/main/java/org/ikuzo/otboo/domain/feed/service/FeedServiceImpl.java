@@ -186,6 +186,27 @@ public class FeedServiceImpl implements FeedService {
         return feedMapper.toDto(feed);
     }
 
+    @Override
+    @Transactional
+    public void deleteFeed(UUID feedId) {
+        log.info("[FeedService] Feed 삭제 시작 feedId = {}", feedId);
+
+        Feed feed = feedRepository.findById(feedId)
+            .orElseThrow(() -> new FeedNotFoundException(feedId));
+
+        UUID currentUserId = currentUserId();
+        User author = feed.getAuthor();
+        UUID authorId = (author != null) ? author.getId() : null;
+
+        if (authorId == null || !authorId.equals(currentUserId)) {
+            throw new FeedAuthorUnmatchException(authorId);
+        }
+
+        feedRepository.delete(feed);
+
+        log.info("[FeedService] Feed 삭제 완료 feedId = {}", feedId);
+    }
+
     // 로그인한 사용자 ID 가져오는 메서드
     private UUID currentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

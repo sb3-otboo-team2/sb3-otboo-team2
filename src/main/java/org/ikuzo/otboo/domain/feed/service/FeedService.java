@@ -19,4 +19,6 @@ public interface FeedService {
                                    String precipitationTypeEqual);
 
     FeedDto updateFeed(UUID feedId, FeedUpdateRequest request);
+
+    void deleteFeed(UUID feedId);
 }
