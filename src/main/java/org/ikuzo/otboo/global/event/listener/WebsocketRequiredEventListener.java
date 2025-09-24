@@ -29,7 +29,7 @@ public class WebsocketRequiredEventListener {
     }
 
     public String buildDmKey(UUID userId1, UUID userId2) {
-        List<UUID> sorted = Stream.of(userId1, userId2)
+        List<String> sorted = Stream.of(userId1.toString(), userId2.toString())
             .sorted()
             .toList();
         return sorted.get(0) + "_" + sorted.get(1);
