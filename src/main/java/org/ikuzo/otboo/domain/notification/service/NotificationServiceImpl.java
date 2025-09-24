@@ -14,6 +14,8 @@ import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.event.message.NotificationCreatedEvent;
 import org.ikuzo.otboo.global.security.OtbooUserDetails;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
@@ -37,8 +39,9 @@ public class NotificationServiceImpl implements NotificationService {
     private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @CacheEvict(cacheNames = "notifications", allEntries = true)
     public void create(Set<UUID> receiverIds, String title, String content, Level level) {
         if (receiverIds.isEmpty()) {
             log.warn("알림 생성 요청이 비어있음: receiverIds={}", receiverIds);
@@ -66,6 +69,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "notifications", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
     public PageResponse<NotificationDto> getNotifications(Instant cursor, UUID idAfter, int limit) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         OtbooUserDetails principal = (OtbooUserDetails) authentication.getPrincipal();
@@ -108,6 +112,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "notifications", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
     public void deleteNotification(UUID notificationId) {
         Notification notification = notificationRepository.findById(notificationId).orElseThrow(() -> NotificationNotFoundException.notFoundException(notificationId));
 
