@@ -32,6 +32,11 @@ public class FeedLikeServiceImpl implements FeedLikeService {
         log.info("[FeedLikeService] 피드 좋아요 생성 시작 feedId={}", feedId);
 
         UUID userId = currentUserId();
+
+        if (feedLikeRepository.existsByUser_IdAndFeed_Id(userId, feedId)) {
+            throw new IllegalStateException("이미 좋아요를 누른 피드입니다.");
+        }
+
         User user = userRepository.findById(userId)
             .orElseThrow(() -> UserNotFoundException.withId(userId));
 

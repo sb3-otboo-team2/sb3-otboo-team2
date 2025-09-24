@@ -163,7 +163,7 @@ public class FeedServiceImpl implements FeedService {
                 .map(Feed::getId)
                 .toList();
 
-            likedFeedIds = feedLikeRepository.findByUserIdAndFeedIdIn(currentUserId, feedIds).stream()
+            likedFeedIds = feedLikeRepository.findByUser_IdAndFeed_IdIn(currentUserId, feedIds).stream()
                 .map(feedLike -> feedLike.getFeed().getId())
                 .collect(Collectors.toSet());
         }

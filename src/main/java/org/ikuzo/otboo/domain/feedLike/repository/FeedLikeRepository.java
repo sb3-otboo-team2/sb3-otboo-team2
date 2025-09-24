@@ -8,5 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FeedLikeRepository extends JpaRepository<FeedLike, UUID> {
 
-    List<FeedLike> findByUserIdAndFeedIdIn(UUID userId, Collection<UUID> feedIds);
+    List<FeedLike> findByUser_IdAndFeed_IdIn(UUID userId, Collection<UUID> feedIds);
+
+    Boolean existsByUser_IdAndFeed_Id(UUID userId, UUID feedId);
 }
