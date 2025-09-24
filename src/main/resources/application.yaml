@@ -2,6 +2,11 @@ spring:
   profiles:
     active:
       - local
+  servlet:
+    multipart:
+      max-file-size: 10MB       # 업로드 단일 파일 최대 크기
+      max-request-size: 20MB    # 요청 전체(여러 파일 포함) 최대 크기
+
   security:
     oauth2:
       client:
@@ -57,3 +62,9 @@ weather:
   batch:
     enabled: true
     cron: "0 0/30 * * * *"
+
+openai:
+  base-url: https://api.openai.com/v1
+  model: gpt-4o-mini
+  api-key: ${OPENAI_API_KEY}
+  timeout-ms: 8000

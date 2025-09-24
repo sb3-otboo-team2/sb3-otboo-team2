@@ -9,7 +9,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import java.util.UUID;
+import org.hibernate.validator.constraints.URL;
 import org.ikuzo.otboo.domain.clothes.dto.ClothesDto;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesCreateRequest;
 import org.ikuzo.otboo.domain.clothes.dto.request.ClothesUpdateRequest;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Mono;
 
 @Tag(name = "의상 관리", description = "의상 관련 API")
 public interface ClothesApi {
@@ -118,6 +121,29 @@ public interface ClothesApi {
     })
     ResponseEntity<Void> delete(
         @PathVariable("clothesId") UUID clothesId
+    );
+
+    @Operation(summary = "구매 링크로 옷 정보 불러오기")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "구매 링크로 옷 정보 불러오기 성공",
+            content = @Content(
+                mediaType = "*/*",
+                schema = @Schema(implementation = ClothesDto.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "구매 링크로 옷 정보 불러오기 실패",
+            content = @Content(
+                mediaType = "*/*",
+                schema = @Schema(implementation = ErrorResponse.class)
+            )
+        )
+    })
+    Mono<ResponseEntity<ClothesDto>> extractByUrl(
+        @RequestParam("url") @NotBlank @URL(regexp = "^https?://.+") String url
     );
 
 }
