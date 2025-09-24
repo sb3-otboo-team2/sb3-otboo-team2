@@ -69,7 +69,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "notifications", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
+    @Cacheable(cacheNames = "notifications",
+        key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()",
+        condition = "#cursor == null && #idAfter == null"
+    )
     public PageResponse<NotificationDto> getNotifications(Instant cursor, UUID idAfter, int limit) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         OtbooUserDetails principal = (OtbooUserDetails) authentication.getPrincipal();
