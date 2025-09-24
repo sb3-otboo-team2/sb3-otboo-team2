@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.domain.recommend.entity;
+package org.ikuzo.otboo.domain.recommendation.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
