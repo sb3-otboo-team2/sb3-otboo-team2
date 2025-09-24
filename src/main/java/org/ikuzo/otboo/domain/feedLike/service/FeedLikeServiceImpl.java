@@ -33,7 +33,7 @@ public class FeedLikeServiceImpl implements FeedLikeService {
 
         UUID userId = currentUserId();
         User user = userRepository.findById(userId)
-            .orElseThrow(UserNotFoundException::new);
+            .orElseThrow(() -> UserNotFoundException.withId(userId));
 
         Feed feed = feedRepository.findById(feedId)
             .orElseThrow(() -> new FeedNotFoundException(feedId));
