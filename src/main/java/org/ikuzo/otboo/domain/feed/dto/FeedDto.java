@@ -21,4 +21,8 @@ public record FeedDto(
     boolean likedByMe
 ) {
 
+    // Entity의 세터메서드 지우고 DTO 에서 LikedByMe 주입
+    public FeedDto withLikedByMe(boolean likedByMe) {
+        return this.toBuilder().likedByMe(likedByMe).build();
+    }
 }
