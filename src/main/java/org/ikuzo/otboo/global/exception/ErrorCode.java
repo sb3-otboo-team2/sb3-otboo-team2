@@ -36,7 +36,9 @@ public enum ErrorCode {
     FOLLOW_NOT_FOUND("존재하지 않는 팔로우 입니다."),
 
     // 피드
+    FEED_NOT_FOUND("해당 피드는 존재하지 않습니다."),
     FEED_CLOTHES_NOT_FOUND("존재하지 않는 의상 ID가 포함되어 있습니다."),
+    FEED_UNMATCH_AUTHOR("해당 사용자가 게시한 피드가 아닙니다."),
     FEED_UNMATCH_CLOTHES_OWNER("해당 사용자가 가지고 있지 않는 의상입니다."),
 
     // 날씨/외부 API
