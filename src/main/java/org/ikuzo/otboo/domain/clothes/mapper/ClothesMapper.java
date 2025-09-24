@@ -8,7 +8,7 @@ import org.ikuzo.otboo.domain.clothes.entity.AttributeOption;
 import org.ikuzo.otboo.domain.clothes.entity.Clothes;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttribute;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
-import org.ikuzo.otboo.domain.feed.dto.OotdDto;
+import org.ikuzo.otboo.domain.recommendation.dto.OotdDto;
 import org.ikuzo.otboo.domain.feed.entity.FeedClothes;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
