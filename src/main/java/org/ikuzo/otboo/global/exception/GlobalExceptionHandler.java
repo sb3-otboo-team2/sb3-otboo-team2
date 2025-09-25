@@ -3,6 +3,7 @@ package org.ikuzo.otboo.global.exception;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -16,6 +17,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
+        if (e instanceof AccessDeniedException) {
+            log.debug("AccessDeniedException은 Spring Security에서 처리: {}", e.getMessage());
+            throw (AccessDeniedException) e;  // 다시 던져서 Security가 처리하도록
+        }
+
         log.error("예상치 못한 오류 발생: {}", e.getMessage(), e);
         ErrorResponse errorResponse = new ErrorResponse(e);
         return ResponseEntity
