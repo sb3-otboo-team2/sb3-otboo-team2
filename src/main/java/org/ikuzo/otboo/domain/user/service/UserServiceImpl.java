@@ -65,7 +65,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public ProfileDto update(UUID userId, ProfileUpdateRequest profileUpdateRequest, Optional<MultipartFile> image) {
-        log.debug("사용자 프로필 수정 시작: id={}, request={}", userId, profileUpdateRequest);
+        log.debug("사용자 프로필 수정 시작: id={}", userId);
 
         User user = userRepository.findById(userId)
             .orElseThrow(() -> {
@@ -75,7 +75,7 @@ public class UserServiceImpl implements UserService {
 
         String newProfileImageUrl = image.map(img -> {
             log.debug("프로필 이미지 업로드 시작");
-            return imageSwapHelper.swapImageSafely("profileImage/", img, user.profileImageUrl, userId);
+            return imageSwapHelper.swapImageSafely("profileImage/", img, user.getProfileImageUrl(), userId);
         }).orElse(null);
 
         user.update(

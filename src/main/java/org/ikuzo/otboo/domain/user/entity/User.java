@@ -52,7 +52,7 @@ public class User extends BaseUpdatableEntity {
     private Integer temperatureSensitivity = 3;
 
     @Column(columnDefinition = "TEXT")
-    public String profileImageUrl;
+    private String profileImageUrl;
 
     @Column(nullable = false)
     private Boolean locked = false;
