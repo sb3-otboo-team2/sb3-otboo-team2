@@ -31,10 +31,10 @@ public class CommentServiceImpl implements CommentService {
     @Transactional
     @Override
     public void create(CommentCreateRequest request) {
-        log.info("[CommentService] 피드 댓글 생성 시작 authorId={} feedId={}", request.authorId(), request.feedId());
-
         UUID userId = currentUserId();
         UUID feedId = request.feedId();
+
+        log.info("[CommentService] 피드 댓글 생성 시작 authorId={} feedId={}", userId, feedId);
 
         User user = userRepository.findById(userId)
             .orElseThrow(() -> UserNotFoundException.withId(userId));
@@ -51,7 +51,7 @@ public class CommentServiceImpl implements CommentService {
 
         commentRepository.save(comment);
 
-        log.info("[CommentService] 피드 댓글 생성 완료 authorId={} feedId={}", request.authorId(), request.feedId());
+        log.info("[CommentService] 피드 댓글 생성 완료 authorId={} feedId={}", userId, feedId);
     }
 
     // 로그인한 사용자 ID 가져오는 메서드
