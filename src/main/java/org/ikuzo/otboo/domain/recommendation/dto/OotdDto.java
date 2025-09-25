@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.domain.feed.dto;
+package org.ikuzo.otboo.domain.recommendation.dto;
 
 import java.util.List;
 import java.util.UUID;

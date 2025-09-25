@@ -1,7 +1,7 @@
-package org.ikuzo.otboo.domain.recommend.repository;
+package org.ikuzo.otboo.domain.recommendation.repository;
 
 import java.util.UUID;
-import org.ikuzo.otboo.domain.recommend.entity.RecommendationClothes;
+import org.ikuzo.otboo.domain.recommendation.entity.RecommendationClothes;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
