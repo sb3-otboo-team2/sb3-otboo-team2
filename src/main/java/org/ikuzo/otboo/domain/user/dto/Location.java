@@ -9,5 +9,10 @@ public record Location(
     Integer y,
     List<String> locationNames
 ) {
-
+    public String getLocationNamesAsString() {
+        if (locationNames == null || locationNames.isEmpty()) {
+            return null;
+        }
+        return String.join(" ", locationNames);
+    }
 }
