@@ -41,6 +41,7 @@ public enum ErrorCode {
     FEED_UNMATCH_AUTHOR("해당 사용자가 게시한 피드가 아닙니다."),
     FEED_UNMATCH_CLOTHES_OWNER("해당 사용자가 가지고 있지 않는 의상입니다."),
     FEED_LIKE_ALREADY_EXISTS("이미 좋아요를 누른 피드입니다."),
+    FEED_LIKE_NOT_FOUND("삭제할 좋아요가 존재하지 않습니다"),
 
     // 날씨/외부 API
     WEATHER_NOT_FOUND("날씨값을 찾을 수 없습니다."),

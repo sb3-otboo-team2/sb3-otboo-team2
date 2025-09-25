@@ -4,6 +4,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
+import org.ikuzo.otboo.domain.feed.exception.FeedLikeNotFoundException;
 import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
 import org.ikuzo.otboo.domain.feedLike.entity.FeedLike;
@@ -64,10 +65,8 @@ public class FeedLikeServiceImpl implements FeedLikeService {
             .orElseThrow(() -> new FeedNotFoundException(feedId));
         feed.unlike();
 
-        FeedLike feedLike = FeedLike.builder()
-            .user(user)
-            .feed(feed)
-            .build();
+        FeedLike feedLike = feedLikeRepository.findByFeedAndUser(feed, user)
+            .orElseThrow(FeedLikeNotFoundException::new);
 
         feedLikeRepository.delete(feedLike);
 
