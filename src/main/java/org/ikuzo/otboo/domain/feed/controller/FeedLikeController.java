@@ -28,7 +28,7 @@ public class FeedLikeController {
 
         feedLikeService.create(feedId);
 
-        log.info("[FeedLikeController] 피드 좋아요 생성 t완료 feedId={}", feedId);
+        log.info("[FeedLikeController] 피드 좋아요 생성 완료 feedId={}", feedId);
 
         return ResponseEntity.noContent().build();
     }
