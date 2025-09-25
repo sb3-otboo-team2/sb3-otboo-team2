@@ -1,7 +1,9 @@
 package org.ikuzo.otboo.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ikuzo.otboo.domain.user.entity.Role;
 import org.ikuzo.otboo.global.oauth2.handler.Oauth2LoginSuccessHandler;
+import org.ikuzo.otboo.global.security.Http403ForbiddenAccessDeniedHandler;
 import org.ikuzo.otboo.global.security.JwtAuthenticationFilter;
 import org.ikuzo.otboo.global.security.JwtLoginSuccessHandler;
 import org.ikuzo.otboo.global.security.JwtLogoutHandler;
@@ -19,6 +21,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 
@@ -32,6 +35,7 @@ public class SecurityConfig {
         HttpSecurity http,
         JwtLoginSuccessHandler jwtLoginSuccessHandler,
         LoginFailureHandler loginFailureHandler,
+        ObjectMapper objectMapper,
         JwtAuthenticationFilter jwtAuthenticationFilter,
         JwtLogoutHandler jwtLogoutHandler,
         Oauth2LoginSuccessHandler oauth2LoginSuccessHandler
@@ -66,6 +70,10 @@ public class SecurityConfig {
 //                ).permitAll()
 //                .anyRequest().authenticated()
                     .anyRequest().permitAll()
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(new Http403ForbiddenEntryPoint())
+                .accessDeniedHandler(new Http403ForbiddenAccessDeniedHandler(objectMapper))
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
