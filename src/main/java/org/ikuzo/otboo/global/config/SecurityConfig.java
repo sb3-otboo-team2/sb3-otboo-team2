@@ -1,7 +1,9 @@
 package org.ikuzo.otboo.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ikuzo.otboo.domain.user.entity.Role;
 import org.ikuzo.otboo.global.oauth2.handler.Oauth2LoginSuccessHandler;
+import org.ikuzo.otboo.global.security.Http403ForbiddenAccessDeniedHandler;
 import org.ikuzo.otboo.global.security.JwtAuthenticationFilter;
 import org.ikuzo.otboo.global.security.JwtLoginSuccessHandler;
 import org.ikuzo.otboo.global.security.JwtLogoutHandler;
@@ -10,6 +12,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -19,6 +23,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 
@@ -32,6 +37,7 @@ public class SecurityConfig {
         HttpSecurity http,
         JwtLoginSuccessHandler jwtLoginSuccessHandler,
         LoginFailureHandler loginFailureHandler,
+        ObjectMapper objectMapper,
         JwtAuthenticationFilter jwtAuthenticationFilter,
         JwtLogoutHandler jwtLogoutHandler,
         Oauth2LoginSuccessHandler oauth2LoginSuccessHandler
@@ -67,6 +73,10 @@ public class SecurityConfig {
 //                .anyRequest().authenticated()
                     .anyRequest().permitAll()
             )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(new Http403ForbiddenEntryPoint())
+                .accessDeniedHandler(new Http403ForbiddenAccessDeniedHandler(objectMapper))
+            )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
@@ -87,6 +97,14 @@ public class SecurityConfig {
             .role(Role.ADMIN.name())
             .implies(Role.USER.name())
             .build();
+    }
+
+    @Bean
+    static MethodSecurityExpressionHandler methodSecurityExpressionHandler(
+        RoleHierarchy roleHierarchy) {
+        DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
+        handler.setRoleHierarchy(roleHierarchy);
+        return handler;
     }
 }
 

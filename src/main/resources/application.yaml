@@ -68,3 +68,8 @@ openai:
   model: gpt-4o-mini
   api-key: ${OPENAI_API_KEY}
   timeout-ms: 8000
+
+admin:
+  name: ${OTBOO_ADMIN_NAME}
+  email: ${OTBOO_ADMIN_EMAIL}
+  password: ${OTBOO_ADMIN_PASSWORD}
