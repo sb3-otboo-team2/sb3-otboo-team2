@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
+import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 
 @Entity
@@ -26,9 +27,9 @@ public class Comment extends BaseUpdatableEntity {
     @JoinColumn(name = "feed_id", nullable = false)
     private Feed feed;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "author_id", nullable = false)
-//    private User author;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id", nullable = false)
+    private User author;
 
     @Column(length = 100, nullable = false)
     private String content;
