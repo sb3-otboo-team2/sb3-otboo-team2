@@ -14,7 +14,6 @@ import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.mapper.UserMapper;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.util.ImageSwapHelper;
-import org.ikuzo.otboo.global.util.S3ImageStorage;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
