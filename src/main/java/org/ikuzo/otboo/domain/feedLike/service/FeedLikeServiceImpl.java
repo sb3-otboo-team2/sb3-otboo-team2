@@ -4,7 +4,6 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
-import org.ikuzo.otboo.domain.feed.exception.FeedLikeAlreadyExistsException;
 import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
 import org.ikuzo.otboo.domain.feedLike.entity.FeedLike;
@@ -34,10 +33,6 @@ public class FeedLikeServiceImpl implements FeedLikeService {
 
         UUID userId = currentUserId();
 
-        if (feedLikeRepository.existsByUser_IdAndFeed_Id(userId, feedId)) {
-            throw FeedLikeAlreadyExistsException.with(feedId, userId);
-        }
-
         User user = userRepository.findById(userId)
             .orElseThrow(() -> UserNotFoundException.withId(userId));
 
@@ -54,6 +49,30 @@ public class FeedLikeServiceImpl implements FeedLikeService {
 
         log.info("[FeedLikeService] 피드 좋아요 생성 완료 feedId={}, userId={}", feedId, userId);
     }
+
+    @Override
+    public void delete(UUID feedId) {
+        log.info("[FeedLikeService] 피드 좋아요 삭제 시작 feedId={}", feedId);
+
+        UUID userId = currentUserId();
+
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> UserNotFoundException.withId(userId));
+
+        Feed feed = feedRepository.findById(feedId)
+            .orElseThrow(() -> new FeedNotFoundException(feedId));
+        feed.unlike();
+
+        FeedLike feedLike = FeedLike.builder()
+            .user(user)
+            .feed(feed)
+            .build();
+
+        feedLikeRepository.delete(feedLike);
+
+        log.info("[FeedLikeService] 피드 좋아요 삭제 완료 feedId={}, userId={}", feedId, userId);
+    }
+
 
     private UUID currentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
