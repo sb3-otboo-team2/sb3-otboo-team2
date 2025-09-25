@@ -51,6 +51,7 @@ public class FeedLikeServiceImpl implements FeedLikeService {
     }
 
     @Override
+    @Transactional
     public void delete(UUID feedId) {
         log.info("[FeedLikeService] 피드 좋아요 삭제 시작 feedId={}", feedId);
 
