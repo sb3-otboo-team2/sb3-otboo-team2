@@ -122,4 +122,10 @@ public class User extends BaseUpdatableEntity {
             this.locationNames = newLocationNames;
         }
     }
+
+    public void updateRole(Role newRole) {
+        if (newRole != null && !newRole.equals(this.role)) {
+            this.role = newRole;
+        }
+    }
 }
