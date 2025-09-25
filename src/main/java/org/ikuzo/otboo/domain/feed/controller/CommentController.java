@@ -27,11 +27,15 @@ public class CommentController {
         @RequestBody @Valid CommentCreateRequest request
     ) {
 
-        log.info("[CommentController] 피드 댓글 생성 시작 authorId={} feedId={}", request.authorId(), request.feedId());
+        if (!feedId.equals(request.feedId())) {
+            throw new IllegalArgumentException("경로의 feedId와 요청 본문의 feedId가 일치하지 않습니다.");
+        }
+
+        log.info("[CommentController] 피드 댓글 생성 시작 authorId={} feedId={}", request.authorId(), feedId);
 
         commentService.create(request);
 
-        log.info("[CommentController] 피드 댓글 생성 완료 authorId={} feedId={}", request.authorId(), request.feedId());
+        log.info("[CommentController] 피드 댓글 생성 완료 authorId={} feedId={}", request.authorId(), feedId);
 
         return ResponseEntity.ok(request);
     }
