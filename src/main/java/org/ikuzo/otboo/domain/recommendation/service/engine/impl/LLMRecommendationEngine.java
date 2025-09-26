@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.clothes.config.OpenAiProps;
 import org.ikuzo.otboo.domain.clothes.entity.Clothes;
@@ -23,6 +22,7 @@ import org.ikuzo.otboo.domain.recommendation.service.engine.RecommendationEngine
 import org.ikuzo.otboo.domain.recommendation.util.OpenAiPromptTemplates;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -31,7 +31,6 @@ import reactor.core.scheduler.Schedulers;
 @Primary
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class LLMRecommendationEngine implements RecommendationEngine {
 
     private static final double OPENAI_TEMPERATURE = 0.3;
@@ -40,6 +39,21 @@ public class LLMRecommendationEngine implements RecommendationEngine {
     private final OpenAiChatClient chatClient;
     private final OpenAiProps openAiProps;
     private final ObjectMapper objectMapper;
+    private final RecommendationEngine randomEngine;
+
+    public LLMRecommendationEngine(
+        ClothesRepository clothesRepository,
+        OpenAiChatClient chatClient,
+        OpenAiProps openAiProps,
+        ObjectMapper objectMapper,
+        @Qualifier("randomRecommendationEngine") RecommendationEngine randomEngine
+    ) {
+        this.clothesRepository = clothesRepository;
+        this.chatClient = chatClient;
+        this.openAiProps = openAiProps;
+        this.objectMapper = objectMapper;
+        this.randomEngine = randomEngine;
+    }
 
     @Override
     public List<Clothes> recommend(User owner, Weather weather) {
@@ -71,13 +85,14 @@ public class LLMRecommendationEngine implements RecommendationEngine {
         List<Clothes> result = toClothesSorted(res, clothes);
 
         if (result.isEmpty()) {
-            return fallback(clothes);
+            return fallback(owner, weather, clothes);
         }
         return result;
     }
 
     private Mono<String> callOpenAi(String systemPrompt, String userPrompt) {
-        return chatClient.chatJson(openAiProps.model(), systemPrompt, userPrompt, OPENAI_TEMPERATURE);
+        return chatClient.chatJson(openAiProps.model(), systemPrompt, userPrompt,
+            OPENAI_TEMPERATURE);
     }
 
     private RecommendRequest toRequest(User owner, Weather weather, List<Clothes> clothes) {
@@ -128,17 +143,17 @@ public class LLMRecommendationEngine implements RecommendationEngine {
         try {
             JsonNode root = objectMapper.readTree(content);
             JsonNode picks = root.path("picks");
-            JsonNode summary = root.path("summary");
-            log.info("의상 선택 이유: {}", summary.toString());
 
             List<RecommendResponse.Pick> out = new ArrayList<>();
             if (picks.isArray()) {
                 for (JsonNode p : picks) {
                     try {
                         UUID id = UUID.fromString(p.path("id").asText());
-                        double score = clamp0to1(p.path("score").asDouble(0.5));
-                        out.add(new RecommendResponse.Pick(id, score));
-                    } catch (Exception ignore) {}
+                        double score = p.path("score").asDouble(50);
+                        double clampScore = clamp(score);
+                        out.add(new RecommendResponse.Pick(id, clampScore));
+                    } catch (Exception ignore) {
+                    }
                 }
             }
             return new RecommendResponse(out);
@@ -171,19 +186,16 @@ public class LLMRecommendationEngine implements RecommendationEngine {
         return d == null ? 0.0 : d;
     }
 
-    private double clamp0to1(Double d) {
-        double v = d == null ? 0.5 : d;
-        if (v < 0) {
-            return 0;
-        }
-        if (v > 1) {
-            return 1;
-        }
-        return v;
+    private double clamp(double score) {
+        return Math.max(0.0, Math.min(100.0, score)) / 100.0;
     }
 
-    private List<Clothes> fallback(List<Clothes> wardrobe) {
-        int n = Math.min(3, wardrobe.size());
-        return wardrobe.subList(0, n);
+    private List<Clothes> fallback(User owner, Weather weather, List<Clothes> wardrobe) {
+        try {
+            return randomEngine.recommend(owner, weather);
+        } catch (Exception e) {
+            int n = Math.min(3, wardrobe.size());
+            return wardrobe.subList(0, n);
+        }
     }
 }

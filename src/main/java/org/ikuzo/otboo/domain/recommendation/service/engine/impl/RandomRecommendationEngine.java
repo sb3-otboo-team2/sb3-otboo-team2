@@ -13,7 +13,7 @@ import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("randomRecommendationEngine")
 @RequiredArgsConstructor
 public class RandomRecommendationEngine implements RecommendationEngine {
 

@@ -47,7 +47,7 @@ public class OpenAiPromptTemplates {
             v(req.humidity()),
             v(req.skyStatus()),
             v(req.precipitationType()),
-            v(req.WindType())
+            v(req.windType())
         ));
 
         List<WardrobeItem> ws = req.wardrobe();
@@ -63,10 +63,9 @@ public class OpenAiPromptTemplates {
             # Output(JSON only)
             {
               "picks":[
-                {"id":"UUID","score":0..100,"},
+                {"id":"UUID","score": 87},
                 ...
               ],
-              "summary":"전체 선택 이유 한 문장"
             }
             
             반드시 지킬 것:
