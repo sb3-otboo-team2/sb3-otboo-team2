@@ -21,6 +21,8 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class OpenAiHtmlExtractor {
 
+    private static final double OPENAI_TEMPERATURE = 0.0;
+
     private final OpenAiProps props;
     private final OpenAiChatClient chatClient;
     private final ObjectMapper om = new ObjectMapper();
@@ -34,7 +36,6 @@ public class OpenAiHtmlExtractor {
         final String title = Optional.ofNullable(parsed.title()).orElse("");
         final String image = parsed.ogImage();
 
-        // 본문 텍스트: Parsed가 제공하면 그대로 사용, 없으면 빈 문자열 제공
         String text = Optional.ofNullable(parsed.strippedText()).orElse("");
         if (text.isBlank()) {
             Document doc = Jsoup.parse(parsed.fullHtml() != null ? parsed.fullHtml() : "");
@@ -64,7 +65,7 @@ public class OpenAiHtmlExtractor {
         }
         String user = "URL: " + uri + "\nTITLE: " + title + "\n\nTEXT:\n" + text;
 
-        return chatClient.chatJson(props.model(), system.toString(), user)
+        return chatClient.chatJson(props.model(), system.toString(), user, OPENAI_TEMPERATURE)
             .flatMap(content -> {
                 try {
                     JsonNode root = om.readTree(content);
