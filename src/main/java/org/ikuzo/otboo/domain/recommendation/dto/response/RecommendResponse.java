@@ -4,12 +4,10 @@ import java.util.List;
 import java.util.UUID;
 
 public record RecommendResponse(
-    List<Pick> picks,
-    String reasoning
+    List<Pick> picks
 ) {
     public record Pick(
         UUID id,
-        Double score,
-        String reason
+        Double score
     ) {}
 }

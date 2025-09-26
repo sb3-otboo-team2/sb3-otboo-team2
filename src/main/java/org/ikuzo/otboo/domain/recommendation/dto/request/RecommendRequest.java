@@ -11,6 +11,7 @@ public record RecommendRequest(
     Double humidity,
     String skyStatus,
     String precipitationType,
+    String WindType,
     List<WardrobeItem> wardrobe
 ) {
 

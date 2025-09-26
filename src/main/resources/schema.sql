@@ -41,7 +41,8 @@ CREATE TABLE "feeds"
     "comment_count" INTEGER      NOT NULL DEFAULT 0,
     "like_count"    BIGINT       NOT NULL DEFAULT 0,
     CONSTRAINT "PK_FEEDS" PRIMARY KEY ("id"),
-    CONSTRAINT "FK_FEEDS_USERS" FOREIGN KEY ("author_id") REFERENCES "users" ("id") ON DELETE CASCADE
+    CONSTRAINT "FK_FEEDS_USERS" FOREIGN KEY ("author_id") REFERENCES "users" ("id") ON DELETE CASCADE,
+    CONSTRAINT "FK_FEEDS_WEATHER" FOREIGN KEY ("weather_id") REFERENCES "weathers" ("id") ON DELETE CASCADE
 );
 
 -- ===============================
@@ -317,3 +318,7 @@ ALTER TABLE "clothes"
             ));
 
 COMMIT;
+
+ALTER TABLE "feeds"
+    ADD CONSTRAINT "FK_FEEDS_WEATHER"
+        FOREIGN KEY ("weather_id") REFERENCES "weathers" ("id") ON DELETE CASCADE;

@@ -41,7 +41,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                 .map(clothesMapper::toOotdDto)
                     .toList();
 
-        log.info("[Service] 의상 추천 완료 - clothes: {}", clothesDtos);
+        log.info("[Service] 의상 추천 완료 - ItemSize: {}", clothesDtos.size());
 
         return toResponse(weather.getId(), owner.getId(), clothesDtos);
     }

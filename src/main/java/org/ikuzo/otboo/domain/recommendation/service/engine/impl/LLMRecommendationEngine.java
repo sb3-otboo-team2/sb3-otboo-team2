@@ -34,7 +34,7 @@ import reactor.core.scheduler.Schedulers;
 @RequiredArgsConstructor
 public class LLMRecommendationEngine implements RecommendationEngine {
 
-    private static final double OPENAI_TEMPERATURE = 0.2;
+    private static final double OPENAI_TEMPERATURE = 0.3;
 
     private final ClothesRepository clothesRepository;
     private final OpenAiChatClient chatClient;
@@ -70,7 +70,6 @@ public class LLMRecommendationEngine implements RecommendationEngine {
 
         List<Clothes> result = toClothesSorted(res, clothes);
 
-        // 6) 폴백: 비었으면 간단 규칙
         if (result.isEmpty()) {
             return fallback(clothes);
         }
@@ -90,8 +89,9 @@ public class LLMRecommendationEngine implements RecommendationEngine {
             normalize(weather.getHumidityCurrent()),
             weather.getSkyStatus() == null ? null : weather.getSkyStatus(),
             weather.getPrecipitationType() == null ? null : weather.getPrecipitationType(),
+            weather.getWindSpeedWord() == null ? null : weather.getWindSpeedWord(),
             clothes.stream()
-                .limit(50) // 토큰 절약
+                .limit(100)
                 .map(this::toClothesItem)
                 .toList()
         );
@@ -123,28 +123,28 @@ public class LLMRecommendationEngine implements RecommendationEngine {
 
     private RecommendResponse parseResponse(String content) {
         if (content == null || content.isBlank()) {
-            return new RecommendResponse(List.of(), "빈 응답");
+            return new RecommendResponse(List.of());
         }
         try {
             JsonNode root = objectMapper.readTree(content);
             JsonNode picks = root.path("picks");
-            String reasoning = root.path("reasoning").asText("");
+            JsonNode summary = root.path("summary");
+            log.info("의상 선택 이유: {}", summary.toString());
 
             List<RecommendResponse.Pick> out = new ArrayList<>();
             if (picks.isArray()) {
                 for (JsonNode p : picks) {
                     try {
                         UUID id = UUID.fromString(p.path("id").asText());
-                        double score = clamp01(p.path("score").asDouble(0.5));
-                        String reason = p.path("reason").asText("");
-                        out.add(new RecommendResponse.Pick(id, score, reason));
-                    } catch (Exception ignore) { /* 불량 항목 스킵 */ }
+                        double score = clamp0to1(p.path("score").asDouble(0.5));
+                        out.add(new RecommendResponse.Pick(id, score));
+                    } catch (Exception ignore) {}
                 }
             }
-            return new RecommendResponse(out, reasoning);
+            return new RecommendResponse(out);
         } catch (Exception e) {
             log.warn("[LLM-REC] parse fail: {}", e.toString());
-            return new RecommendResponse(List.of(), "LLM 응답 파싱 실패");
+            return new RecommendResponse(List.of());
         }
     }
 
@@ -162,7 +162,7 @@ public class LLMRecommendationEngine implements RecommendationEngine {
 
         // 점수 내림차순 정렬
         return wardrobe.stream()
-            .filter(c -> idSet.contains(c.getId())).sorted(Comparator.<Clothes>comparingDouble(
+            .filter(c -> idSet.contains(c.getId())).sorted(Comparator.comparingDouble(
                 c -> -scoreMap.getOrDefault(c.getId(), 0.0)))
             .collect(Collectors.toCollection(ArrayList::new));
     }
@@ -171,7 +171,7 @@ public class LLMRecommendationEngine implements RecommendationEngine {
         return d == null ? 0.0 : d;
     }
 
-    private double clamp01(Double d) {
+    private double clamp0to1(Double d) {
         double v = d == null ? 0.5 : d;
         if (v < 0) {
             return 0;

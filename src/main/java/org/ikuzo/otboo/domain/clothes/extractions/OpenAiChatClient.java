@@ -20,7 +20,7 @@ public class OpenAiChatClient {
 
     public Mono<String> chatJson(String model, String system, String user, double temperature) {
 
-        log.info("[OpenAiChatClient] chatJson - model: {}, system: {}, user: {}, temperature: {}", model, system, user, temperature);
+        log.info("[OpenAiChatClient] chatJson - model: {}, temperature: {}", model, temperature);
 
         Map<String, Object> body = Map.of(
             "model", model,
