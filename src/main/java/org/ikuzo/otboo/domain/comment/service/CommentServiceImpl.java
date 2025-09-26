@@ -70,6 +70,8 @@ public class CommentServiceImpl implements CommentService {
                                                 UUID idAfter,
                                                 Integer limit) {
 
+        log.info("[CommentService] 피드 댓글 조회 시작 feedId={}", feedId);
+
         int pageLimit = (limit == null || limit <= 0) ? 10 : Math.min(limit, 50);
 
         Instant cursorInstant = parseInstant(cursor);
@@ -92,6 +94,7 @@ public class CommentServiceImpl implements CommentService {
         long totalCount = commentRepository.countByFeed_Id(feedId);
         List<CommentDto> data = content.stream().map(commentMapper::toDto).toList();
 
+        log.info("[CommentService] 피드 댓글 조회 완료 feedId={}", feedId);
         return new PageResponse<>(
             data,
             nextCursor,

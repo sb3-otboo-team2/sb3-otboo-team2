@@ -51,8 +51,12 @@ public class CommentController {
         @RequestParam(required = false) UUID idAfter,
         @RequestParam(required = false, defaultValue = "10") Integer limit
     ) {
+        log.info("[CommentController] 피드 댓글 조회 시작 feedId={}", feedId);
 
         PageResponse<CommentDto> response = commentService.getComments(feedId, cursor, idAfter, limit);
+
+        log.info("[CommentController] 피드 댓글 조회 완료 feedId={}", feedId);
+
         return ResponseEntity.ok(response);
     }
 }
