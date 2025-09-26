@@ -41,13 +41,13 @@ public class OpenAiPromptTemplates {
             
             # Wardrobe (one per line: id|type|attr1,attr2,...)
             """.formatted(
-            v(req.gender()),
-            v(req.tempSensitivity()),
-            v(req.temperature()),
-            v(req.humidity()),
-            v(req.skyStatus()),
-            v(req.precipitationType()),
-            v(req.windType())
+            normalize(req.gender()),
+            normalize(req.tempSensitivity()),
+            normalize(req.temperature()),
+            normalize(req.humidity()),
+            normalize(req.skyStatus()),
+            normalize(req.precipitationType()),
+            normalize(req.windType())
         ));
 
         List<WardrobeItem> ws = req.wardrobe();
@@ -81,8 +81,8 @@ public class OpenAiPromptTemplates {
         return sb.toString();
     }
 
-    private static String v(Object o) {
-        return o == null ? "N/A" : o.toString();
+    private static String normalize(Object value) {
+        return value == null ? "N/A" : value.toString();
     }
 
     private static String safe(String s) {
