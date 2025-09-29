@@ -90,3 +90,7 @@ admin:
   name: ${OTBOO_ADMIN_NAME}
   email: ${OTBOO_ADMIN_EMAIL}
   password: ${OTBOO_ADMIN_PASSWORD}
+
+logging:
+  level:
+    root: info
