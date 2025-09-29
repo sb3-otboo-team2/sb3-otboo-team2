@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.clothes.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.ikuzo.otboo.domain.clothes.entity.Clothes;
@@ -21,4 +22,6 @@ public interface ClothesRepository extends JpaRepository<Clothes, UUID>, Clothes
 """, nativeQuery = true)
     Optional<Clothes> pickRandomClothes(@Param("ownerId") UUID ownerId,
         @Param("type") String type);
+
+    List<Clothes> findByOwnerId(UUID ownerId);
 }
