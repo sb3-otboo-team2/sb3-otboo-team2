@@ -68,7 +68,7 @@ sse:
 
 external:
   kma:
-    base-url: "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0"
+    base-url: "https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0"
     service-key: "${KMA_SERVICE_KEY_ENC}"
     timeout-ms: 5000
   kakao:
@@ -90,3 +90,7 @@ admin:
   name: ${OTBOO_ADMIN_NAME}
   email: ${OTBOO_ADMIN_EMAIL}
   password: ${OTBOO_ADMIN_PASSWORD}
+
+logging:
+  level:
+    root: info

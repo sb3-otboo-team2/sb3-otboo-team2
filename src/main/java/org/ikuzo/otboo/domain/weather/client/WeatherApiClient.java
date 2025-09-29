@@ -53,7 +53,7 @@ public class WeatherApiClient {
     public WeatherApiResponse getVillageforecast(String baseDate, String baseTime, int nx, int ny) {
         URI uri = UriComponentsBuilder.fromUriString(props.getBaseUrl())
             .path("/getVilageFcst")
-            .queryParam("serviceKey", props.getServiceKey())
+            .queryParam("authKey", props.getServiceKey())
             .queryParam("pageNo", 1)
             .queryParam("numOfRows", 1000)
             .queryParam("dataType", "JSON")
