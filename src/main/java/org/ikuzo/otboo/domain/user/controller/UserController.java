@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.domain.user.dto.ChangePasswordRequest;
 import org.ikuzo.otboo.domain.user.dto.ProfileDto;
 import org.ikuzo.otboo.domain.user.dto.ProfileUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
@@ -83,6 +84,18 @@ public class UserController {
         log.info("권한 수정 요청");
         UserDto userDto = userService.updateRole(userId, request);
         return ResponseEntity.ok(userDto);
+    }
+
+    @PatchMapping(path = "/{userId}/password")
+    public ResponseEntity<Void> changePassword(
+        @PathVariable("userId") UUID userId,
+        @RequestBody ChangePasswordRequest request
+    ) {
+        log.info("비밀번호 변경 요청: id={}", userId);
+
+        userService.changePassword(userId, request);
+
+        return ResponseEntity.noContent().build();
     }
 
 }
