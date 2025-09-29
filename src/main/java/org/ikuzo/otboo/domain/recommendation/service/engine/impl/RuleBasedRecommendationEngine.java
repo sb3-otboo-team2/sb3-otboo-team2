@@ -77,8 +77,6 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
     @Override
     public List<Clothes> recommend(User owner, Weather weather) {
 
-        List<Clothes> userClothes = clothesRepository.findByOwnerId(owner.getId());
-
         final double ta = nz(weather.getTemperatureCurrent(), 20.0);
         final double rh = nz(weather.getHumidityCurrent(), 50.0);
         final double wind = windMs(weather);
@@ -105,11 +103,7 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
 
         log.info("ptDay: {}, ptNight: {}, seasonNow: {}",ptDay,ptNight,seasonNow);
 
-        // 후보 필터: 계절 하드
-        List<Clothes> candidateClothes = userClothes.stream()
-            .filter(c -> seasonAllowedStrict(c, seasonNow))
-            .toList();
-
+        List<Clothes> candidateClothes = clothesRepository.findByOwnerId(owner.getId());
         if (candidateClothes.isEmpty()) {
             return List.of();
         }
@@ -268,7 +262,7 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         String itemSeason = attr(c, "계절");
         String itemStyle = attr(c, "스타일");
 
-        int sSeason = seasonPreference(seasonNow, itemSeason);
+        int sSeason = seasonAffinityScore(seasonNow, itemSeason);
         int sStyle = styleScore(anchorStyle, itemStyle);
         int sPenalty = materialPenalty(c, precipitation, precipitationProb);
         int sThick = thicknessScore(c, anchor);
@@ -337,6 +331,19 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
             return SEASON_PREF_PAIR;
         }
         return 0;
+    }
+
+    /** 계절 가점(정확 +2, 봄↔가을 +1, 사계절 +1, 그 외 0) ★ 변경 */
+    private int seasonAffinityScore(String now, String item) {
+        if (item == null || item.isBlank()) return 0;
+        if ("사계절".equals(item)) return SEASON_PREF_ALL;
+        if (item.equals(now)) return SEASON_PREF_EXACT;
+        boolean weakPair =
+            ("봄".equals(now)   && ("가을".equals(item) || "겨울".equals(item))) ||
+                ("가을".equals(now) && ("봄".equals(item)  || "여름".equals(item))) ||
+                ("여름".equals(now) &&  "가을".equals(item)) ||
+                ("겨울".equals(now) &&  "봄".equals(item));
+        return weakPair ? SEASON_PREF_PAIR : 0;
     }
 
     /**
