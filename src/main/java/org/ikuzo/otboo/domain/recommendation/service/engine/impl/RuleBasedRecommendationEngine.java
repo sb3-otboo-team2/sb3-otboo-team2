@@ -32,9 +32,8 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
     private final ClothesRepository clothesRepository;
 
     // ===== 튜닝 상수 =====
-    private static final double OUTER_NEED_NIGHT_COOL = 21.0; // ptNight ≤ 20 → 아우터 필요
-    private static final double OUTER_NEED_NIGHT_MILD = 23.0; // (ptDay ≥ 25 && ptNight ≤ 23) → 필요
-    private static final double DAY_HOT_PT = 25.0; // 낮 덥다 판단 기준
+    private static final double OUTER_NEED_NIGHT_COOL = 21.0; // ptNight ≤ 21 → 아우터 필요
+    private static final double OUTER_NEED_CURRENT_HOT = 23.0; // 현재 온도를 기반으로 아우터 판단
 
     // (선택) 계절 약가점
     private static final int SEASON_PREF_EXACT = 2;  // 현재 계절 정확 일치
@@ -76,19 +75,24 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         final double wind = windMs(weather);
         final double minC = nz(weather.getTemperatureMin(), ta);
 
+        final double personalSensitivity = nz(Double.valueOf(owner.getTemperatureSensitivity()), 3.0);
+
         final Instant forecastUtc = firstNonNull(
             toInstantSafe(weather.getForecastAt()),
             toInstantSafe(weather.getCreatedAt()),
             Instant.now()
         );
-
-        final double ptDay = KmaPerceivedTemperature.compute(ta, rh, wind, forecastUtc);
-        final double ptNight = KmaPerceivedTemperature.compute(minC, rh, wind, forecastUtc);
-        final String seasonNow = seasonByMonth(forecastUtc);               // "봄/여름/가을/겨울"
+        double kmaTmpDay = KmaPerceivedTemperature.compute(ta, rh, wind, forecastUtc);
+        double kmaTmpNight = KmaPerceivedTemperature.compute(minC, rh, wind, forecastUtc);
+        final double ptDay = calculatePersonalTemperature(kmaTmpDay, personalSensitivity);
+        final double ptNight =  calculatePersonalTemperature(kmaTmpNight, personalSensitivity);
+        final String seasonNow = seasonByMonth(forecastUtc); // "봄/여름/가을/겨울"
         final String precipitation = enumName(weather.getPrecipitationType()); // "RAIN"/"SNOW"/"NONE"...
         final Integer precipitationProb = toInt(weather.getPrecipitationProbability()); // null 가능
 
         final boolean outerNeeded = isOuterNeeded(ptDay, ptNight);
+
+        log.info("ptDay: {}, ptNight: {}, seasonNow: {}",ptDay,ptNight,seasonNow);
 
         // 후보 필터: 계절 하드 + 두께(OUTER=ptNight, TOP=ptDay)
         List<Clothes> candidateClothes = userClothes.stream()
@@ -160,13 +164,10 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
     // ────────────────────────────────────────────────────────────────────────
 
     /**
-     * 아우터 필요: (1) 밤 체감 ≤ 21°C, (2) 낮 덥고(≥25) 밤 ≤ 23°C
+     * 아우터 필요: (1) 밤 체감 ≤ 21°C, (2) 낮 체감 ≤ 23°C
      */
     private boolean isOuterNeeded(double ptDay, double ptNight) {
-        if (ptNight <= OUTER_NEED_NIGHT_COOL) {
-            return true;
-        }
-        if (ptDay >= DAY_HOT_PT && ptNight <= OUTER_NEED_NIGHT_MILD) {
+        if (ptNight <= OUTER_NEED_NIGHT_COOL || ptDay <= OUTER_NEED_CURRENT_HOT) {
             return true;
         }
         return false;
@@ -180,6 +181,7 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         Clothes topCandidate = pickBest(byType.get(ClothesType.TOP), seasonNow, null, precipitation, precipitationProb);
         Clothes dressCandidate = pickBest(byType.get(ClothesType.DRESS), seasonNow, null, precipitation, precipitationProb);
 
+        log.info("모든 상의: {}", byType.get(ClothesType.TOP));
         log.info("상의 - {}, 드레스 - {}", topCandidate, dressCandidate);
         Clothes primary = betterOf(topCandidate, dressCandidate, seasonNow, null,
             precipitation, precipitationProb);
@@ -325,7 +327,10 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
             if (ptNight > 21) {
                 return false;
             }
-            if (ptNight > 17) {
+            if (ptNight > 18) {
+                return t.equals("얇음");
+            }
+            if (ptNight > 15) {
                 return t.equals("얇음") || t.equals("보통");
             }
             if (ptNight >= 9) {
@@ -334,13 +339,13 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
             return t.equals("두꺼움");
         }
         if (c.getType() == ClothesType.TOP) {
-            if (ptDay > 23) {
+            if (ptDay > 26) {
                 return t.equals("얇음");
             }
-            if (ptDay > 17) {
+            if (ptDay > 23) {
                 return t.equals("얇음") || t.equals("보통");
             }
-            if (ptDay > 10) {
+            if (ptDay > 8) {
                 return t.equals("보통");
             }
             return t.equals("보통") || t.equals("두꺼움");
@@ -435,12 +440,16 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         return null;
     }
 
+    private double calculatePersonalTemperature(double temp, double sensitive) {
+        return temp + (sensitive - 3);
+    }
+
     private static String seasonByMonth(Instant utc) {
         int m = utc.atZone(KST).getMonthValue();
-        if (m >= 3 && m <= 5) {
+        if (m >= 3 && m <= 6) {
             return "봄";
         }
-        if (m >= 6 && m <= 8) {
+        if (m >= 7 && m <= 8) {
             return "여름";
         }
         if (m >= 9 && m <= 11) {
