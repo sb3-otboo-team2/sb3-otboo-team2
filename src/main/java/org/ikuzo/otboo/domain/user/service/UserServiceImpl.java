@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.domain.user.dto.ChangePasswordRequest;
 import org.ikuzo.otboo.domain.user.dto.ProfileDto;
 import org.ikuzo.otboo.domain.user.dto.ProfileUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
@@ -111,4 +112,26 @@ public class UserServiceImpl implements UserService {
 
         return userMapper.toDto(user);
     }
+
+    @PreAuthorize("principal.userDto.id == #userId")
+    @Transactional
+    @Override
+    public void changePassword(UUID userId, ChangePasswordRequest request) {
+        log.debug("비밀번호 변경 시작: id={}", userId);
+
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> {
+                UserNotFoundException exception = UserNotFoundException.withId(userId);
+                return exception;
+            });
+
+        String newPassword = request.password();
+        String encodedPassword = Optional.ofNullable(newPassword).map(passwordEncoder::encode)
+            .orElse(user.getPassword());
+
+        user.changePassword(encodedPassword);
+
+        log.info("비밀번호 변경 완료: id={}", userId);
+    }
+
 }

@@ -2,6 +2,7 @@ package org.ikuzo.otboo.domain.user.service;
 
 import java.util.Optional;
 import java.util.UUID;
+import org.ikuzo.otboo.domain.user.dto.ChangePasswordRequest;
 import org.ikuzo.otboo.domain.user.dto.ProfileDto;
 import org.ikuzo.otboo.domain.user.dto.ProfileUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
@@ -15,4 +16,5 @@ public interface UserService {
     ProfileDto update(UUID userId, ProfileUpdateRequest profileUpdateRequest, Optional<MultipartFile> image);
     UserDto updateRole(UUID userId, UserRoleUpdateRequest request);
     UserDto updateRoleInternal(UUID userId, UserRoleUpdateRequest request);
+    void changePassword(UUID userId, ChangePasswordRequest request);
 }
