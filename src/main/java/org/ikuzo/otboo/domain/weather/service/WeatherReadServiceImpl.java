@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -290,11 +291,21 @@ public class WeatherReadServiceImpl implements WeatherReadService {
 
     private List<WeatherDto> filterTodayUpcomingLimit(List<WeatherDto> all, int limit) {
         all.sort(Comparator.comparing(WeatherDto::getForecastAt));
-        LocalDate today = LocalDate.now(SEOUL);
         Instant now = Instant.now();
-        return all.stream()
-            .filter(dto -> dto.getForecastAt().atZone(SEOUL).toLocalDate().equals(today))
-            .filter(dto -> !dto.getForecastAt().isBefore(now))
+
+        Map<LocalDate, WeatherDto> perDay = new LinkedHashMap<>();
+        for (WeatherDto dto : all) {
+            if (dto.getForecastAt().isBefore(now)) {
+                continue;
+            }
+            LocalDate date = dto.getForecastAt().atZone(SEOUL).toLocalDate();
+            perDay.putIfAbsent(date, dto);
+            if (perDay.size() >= limit) {
+                break;
+            }
+        }
+
+        return perDay.values().stream()
             .limit(limit)
             .collect(Collectors.toList());
     }
