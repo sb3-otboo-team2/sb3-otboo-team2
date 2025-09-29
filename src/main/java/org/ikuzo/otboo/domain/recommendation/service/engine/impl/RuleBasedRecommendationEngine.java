@@ -31,20 +31,35 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
 
     private final ClothesRepository clothesRepository;
 
+    private double lastPtDay;
+    private double lastPtNight;
+
     // ===== 튜닝 상수 =====
-    private static final double OUTER_NEED_NIGHT_COOL = 21.0; // ptNight ≤ 21 → 아우터 필요
+    private static final double OUTER_NEED_NIGHT_COOL = 20.0; // ptNight ≤ 20 → 아우터 필요
     private static final double OUTER_NEED_CURRENT_HOT = 23.0; // 현재 온도를 기반으로 아우터 판단
 
-    // (선택) 계절 약가점
-    private static final int SEASON_PREF_EXACT = 2;  // 현재 계절 정확 일치
-    private static final int SEASON_PREF_ALL = 0;  // 사계절
-    private static final int SEASON_PREF_PAIR = 1;  // 봄↔가을 교차
+    // 계절 약가점
+    private static final int SEASON_PREF_EXACT = 3;  // 현재 계절 정확 일치
+    private static final int SEASON_PREF_ALL = 1;  // 사계절
+    private static final int SEASON_PREF_PAIR = 2;  // 봄↔가을 교차
+
+    // 타입별 추천 최소 총점
+    private static final int FLOOR_PRIMARY          = 2; // TOP/DRESS
+    private static final int FLOOR_BOTTOM           = 1; // BOTTOM
+    private static final int FLOOR_OUTER_REQUIRED   = 1; // OUTER(필수 모드에서조차 이 미만이면 생략)
+    private static final int FLOOR_MISC             = 0; // SHOES/HAT/SCARF
 
     // ===== 스타일 점수(맵 기반) =====
-    private static final int STYLE_EXACT = 10; // 동일 스타일
-    private static final int STYLE_COMPAT = 8; // 호환/공용
+    private static final int STYLE_EXACT = 5; // 동일 스타일
+    private static final int STYLE_COMPAT = 3; // 호환/공용
     private static final int STYLE_DEFAULT = 0; // 그 외
     private static final String STYLE_ANY = "기본";
+
+    // ===== 재질 감점(강수 확률 ≥50%) =====
+    private static final int PENALTY_RAIN_SUEDE = 3; // 비+스웨이드
+    private static final int PENALTY_RAIN_LEATHER = 2; // 비+가죽/레더
+    private static final int PENALTY_SNOW_SUEDE = 3; // 눈+스웨이드
+    private static final int PENALTY_SNOW_LEATHER = 2; // 눈+가죽/레더
 
     /**
      * 스타일 호환표(앵커→호환집합). 필요 시 항목만 튜닝
@@ -58,12 +73,6 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         "러블리", Set.of("러블리", "캐주얼")
     );
 
-    // ===== 재질 감점(강수 확률 ≥50%) =====
-    private static final int PENALTY_RAIN_SUEDE = 4; // 비+스웨이드
-    private static final int PENALTY_RAIN_LEATHER = 3; // 비+가죽/레더
-    private static final int PENALTY_SNOW_SUEDE = 2; // 눈+스웨이드
-    private static final int PENALTY_SNOW_LEATHER = 2; // 눈+가죽/레더
-
 
     @Override
     public List<Clothes> recommend(User owner, Weather weather) {
@@ -74,7 +83,6 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         final double rh = nz(weather.getHumidityCurrent(), 50.0);
         final double wind = windMs(weather);
         final double minC = nz(weather.getTemperatureMin(), ta);
-
         final double personalSensitivity = nz(Double.valueOf(owner.getTemperatureSensitivity()), 3.0);
 
         final Instant forecastUtc = firstNonNull(
@@ -86,6 +94,9 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         double kmaTmpNight = KmaPerceivedTemperature.compute(minC, rh, wind, forecastUtc);
         final double ptDay = calculatePersonalTemperature(kmaTmpDay, personalSensitivity);
         final double ptNight =  calculatePersonalTemperature(kmaTmpNight, personalSensitivity);
+        this.lastPtDay = ptDay;
+        this.lastPtNight = ptNight;
+
         final String seasonNow = seasonByMonth(forecastUtc); // "봄/여름/가을/겨울"
         final String precipitation = enumName(weather.getPrecipitationType()); // "RAIN"/"SNOW"/"NONE"...
         final Integer precipitationProb = toInt(weather.getPrecipitationProbability()); // null 가능
@@ -94,10 +105,9 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
 
         log.info("ptDay: {}, ptNight: {}, seasonNow: {}",ptDay,ptNight,seasonNow);
 
-        // 후보 필터: 계절 하드 + 두께(OUTER=ptNight, TOP=ptDay)
+        // 후보 필터: 계절 하드
         List<Clothes> candidateClothes = userClothes.stream()
             .filter(c -> seasonAllowedStrict(c, seasonNow))
-            .filter(c -> thicknessAllowed(c, ptDay, ptNight))
             .toList();
 
         if (candidateClothes.isEmpty()) {
@@ -108,48 +118,47 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
             .collect(Collectors.groupingBy(Clothes::getType));
 
         if (outerNeeded) {
-            log.info("아우터 필요");
-            Clothes outer = pickBest(byType.get(ClothesType.OUTER), seasonNow, null, precipitation, precipitationProb);
+            log.info("아우터 점수 계산 실시");
+            Clothes outer = pickBestWithFloor(byType.get(ClothesType.OUTER), seasonNow, null, precipitation, precipitationProb, FLOOR_OUTER_REQUIRED);
 
             if (outer == null) {
-                log.info("아우터는 필요하지만 아우터가 없음");
+                log.info("아우터는 필요하지만 OUTER 후보가 기준점 미달 혹은 없음 → OUTER 없이 진행");
                 return pickWithoutOuter(byType, seasonNow, precipitation, precipitationProb);
             }
 
             List<Clothes> result = new ArrayList<>();
             result.add(outer);
-
-            Clothes top = pickBest(byType.get(ClothesType.TOP), seasonNow, outer, precipitation, precipitationProb);
-            Clothes dress = pickBest(byType.get(ClothesType.DRESS), seasonNow, outer, precipitation, precipitationProb);
+            log.info("상의 및 드레스 점수 계산 실시");
+            Clothes top = pickBestWithFloor(byType.get(ClothesType.TOP), seasonNow, outer, precipitation, precipitationProb,FLOOR_PRIMARY);
+            Clothes dress = pickBestWithFloor(byType.get(ClothesType.DRESS), seasonNow, outer, precipitation, precipitationProb,FLOOR_PRIMARY);
             Clothes inner = betterOf(top, dress, seasonNow, outer, precipitation, precipitationProb);
 
             if (inner != null) {
                 result.add(inner);
                 if (inner.getType() == ClothesType.TOP) {
-                    log.info("상의가 골라짐");
-                    Clothes bottom = pickBest(byType.get(ClothesType.BOTTOM), seasonNow, outer,
-                        precipitation, precipitationProb);
+                    log.info("하의 점수 계산 실시");
+                    Clothes bottom = pickBestWithFloor(byType.get(ClothesType.BOTTOM), seasonNow, outer, precipitation, precipitationProb, FLOOR_BOTTOM);
                     if (bottom != null) {
                         result.add(bottom);
                     }
                 }
             } else {
-                log.info("상의 또는 드레스가 존재하지 않음");
-                Clothes bottom = pickBest(byType.get(ClothesType.BOTTOM), seasonNow, outer, precipitation,
-                    precipitationProb);
+                log.info("상의 또는 드레스가 존재하지 않음(혹은 기준점 미달) → 하의만이라도 시도");
+                log.info("하의 점수 계산 실시");
+                Clothes bottom = pickBestWithFloor(byType.get(ClothesType.BOTTOM), seasonNow, outer, precipitation, precipitationProb, FLOOR_BOTTOM);
                 if (bottom != null) {
                     result.add(bottom);
                 }
             }
-            addIfNotNull(result,
-                pickBest(byType.get(ClothesType.SHOES), seasonNow, outer, precipitation,
-                    precipitationProb));
-            addIfNotNull(result,
-                pickBest(byType.get(ClothesType.HAT), seasonNow, outer, precipitation,
-                    precipitationProb));
-            addIfNotNull(result,
-                pickBest(byType.get(ClothesType.SCARF), seasonNow, outer, precipitation,
-                    precipitationProb));
+
+            log.info("신발 점수 계산 실시");
+            addIfNotNull(result, pickBestWithFloor(byType.get(ClothesType.SHOES), seasonNow, outer, precipitation, precipitationProb, FLOOR_MISC));
+            log.info("모자 점수 계산 실시");
+            addIfNotNull(result, pickBestWithFloor(byType.get(ClothesType.HAT),   seasonNow, outer, precipitation, precipitationProb, FLOOR_MISC));
+            log.info("스카프 점수 계산 실시");
+            addIfNotNull(result, pickBestWithFloor(byType.get(ClothesType.SCARF), seasonNow, outer, precipitation, precipitationProb, FLOOR_MISC));
+            log.info("악세서리 점수 계산 실시");
+            addIfNotNull(result, pickBestWithFloor(byType.get(ClothesType.ACCESSORY), seasonNow, outer, precipitation, precipitationProb, FLOOR_MISC));
 
             return result;
         }
@@ -164,7 +173,7 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
     // ────────────────────────────────────────────────────────────────────────
 
     /**
-     * 아우터 필요: (1) 밤 체감 ≤ 21°C, (2) 낮 체감 ≤ 23°C
+     * 아우터 필요: (1) 밤 체감 ≤ 20°C, (2) 낮 체감 ≤ 23°C
      */
     private boolean isOuterNeeded(double ptDay, double ptNight) {
         if (ptNight <= OUTER_NEED_NIGHT_COOL || ptDay <= OUTER_NEED_CURRENT_HOT) {
@@ -173,64 +182,61 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         return false;
     }
 
-    private List<Clothes> pickWithoutOuter(Map<ClothesType, List<Clothes>> byType,
-        String seasonNow, String precipitation, Integer precipitationProb
+    private List<Clothes> pickWithoutOuter(Map<ClothesType, List<Clothes>> byType, String seasonNow, String precipitation, Integer precipitationProb
     ) {
         List<Clothes> result = new ArrayList<>();
 
-        Clothes topCandidate = pickBest(byType.get(ClothesType.TOP), seasonNow, null, precipitation, precipitationProb);
-        Clothes dressCandidate = pickBest(byType.get(ClothesType.DRESS), seasonNow, null, precipitation, precipitationProb);
+        log.info("상의 및 드레스 점수 계산 실시");
+        Clothes topCandidate   = pickBestWithFloor(byType.get(ClothesType.TOP),   seasonNow, null, precipitation, precipitationProb, FLOOR_PRIMARY);
+        Clothes dressCandidate = pickBestWithFloor(byType.get(ClothesType.DRESS), seasonNow, null, precipitation, precipitationProb, FLOOR_PRIMARY);
 
-        log.info("모든 상의: {}", byType.get(ClothesType.TOP));
+        log.info("모든 상의 후보 수: {}", byType.getOrDefault(ClothesType.TOP, List.of()).size());
         log.info("상의 - {}, 드레스 - {}", topCandidate, dressCandidate);
-        Clothes primary = betterOf(topCandidate, dressCandidate, seasonNow, null,
-            precipitation, precipitationProb);
 
-        log.info("아우터가 필요 없는 상황에서 골라진 옷 - {}", primary);
+        Clothes primary = betterOf(topCandidate, dressCandidate, seasonNow, null, precipitation, precipitationProb);
+        log.info("아우터가 필요 없는 상황에서 골라진 메인 - {}", primary);
+
         if (primary != null) {
             result.add(primary);
             if (primary.getType() == ClothesType.TOP) {
-                Clothes bottom = pickBest(byType.get(ClothesType.BOTTOM), seasonNow, primary, precipitation, precipitationProb);
+                log.info("하의 점수 계산 실시");
+                Clothes bottom = pickBestWithFloor(byType.get(ClothesType.BOTTOM), seasonNow, primary, precipitation, precipitationProb, FLOOR_BOTTOM);
                 if (bottom != null) {
                     result.add(bottom);
                 }
             }
         } else {
-            Clothes bottom = pickBest(byType.get(ClothesType.BOTTOM), seasonNow, null, precipitation, precipitationProb);
+            log.info("하의 점수 계산 실시");
+            Clothes bottom = pickBestWithFloor(byType.get(ClothesType.BOTTOM), seasonNow, null, precipitation, precipitationProb, FLOOR_BOTTOM);
             if (bottom != null) {
                 result.add(bottom);
             }
         }
 
-        addIfNotNull(result,
-            pickBest(byType.get(ClothesType.OUTER), seasonNow, primary, precipitation,
-                precipitationProb));
-        addIfNotNull(result,
-            pickBest(byType.get(ClothesType.SHOES), seasonNow, primary, precipitation,
-                precipitationProb));
-        addIfNotNull(result,
-            pickBest(byType.get(ClothesType.HAT), seasonNow, primary, precipitation,
-                precipitationProb));
-        addIfNotNull(result,
-            pickBest(byType.get(ClothesType.SCARF), seasonNow, primary, precipitation,
-                precipitationProb));
+        log.info("신발 점수 계산 실시");
+        addIfNotNull(result, pickBestWithFloor(byType.get(ClothesType.SHOES), seasonNow, primary, precipitation, precipitationProb, FLOOR_MISC));
+        log.info("모자 점수 계산 실시");
+        addIfNotNull(result, pickBestWithFloor(byType.get(ClothesType.HAT),   seasonNow, primary, precipitation, precipitationProb, FLOOR_MISC));
+        log.info("스카프 점수 계산 실시");
+        addIfNotNull(result, pickBestWithFloor(byType.get(ClothesType.SCARF), seasonNow, primary, precipitation, precipitationProb, FLOOR_MISC));
+        log.info("악세서리 점수 계산 실시");
+        addIfNotNull(result, pickBestWithFloor(byType.get(ClothesType.ACCESSORY), seasonNow, primary, precipitation, precipitationProb, FLOOR_MISC));
+
         return result;
     }
 
     /**
      * 같은 타입 리스트에서 최고 득점 1개
      */
-    private Clothes pickBest(List<Clothes> list, String seasonNow, Clothes anchor, String precipitation,
-        Integer precipitationProb
-    ) {
+    private Clothes pickBest(List<Clothes> list, String seasonNow, Clothes anchor, String precipitation, Integer precipitationProb) {
         if (list == null || list.isEmpty()) {
             return null;
         }
         String anchorStyle = (anchor == null) ? null : attr(anchor, "스타일");
-        int best = Integer.MIN_VALUE;
+        int best = 0;
         Clothes bestItem = null;
         for (Clothes c : list) {
-            int s = totalScore(c, seasonNow, anchorStyle, precipitation, precipitationProb);
+            int s = totalScore(c, seasonNow, anchorStyle, precipitation, precipitationProb, anchor);
             if (s > best) {
                 best = s;
                 bestItem = c;
@@ -239,19 +245,38 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         return bestItem;
     }
 
+    private Clothes pickBestWithFloor(List<Clothes> list, String seasonNow, Clothes anchor, String precipitation,
+        Integer precipitationProb, int floorTotal) {
+        if (list == null || list.isEmpty()) return null;
+        String anchorStyle = (anchor == null) ? null : attr(anchor, "스타일");
+        int best = Integer.MIN_VALUE;
+        Clothes bestItem = null;
+        for (Clothes c : list) {
+            int s = totalScore(c, seasonNow, anchorStyle, precipitation, precipitationProb, anchor);
+            if (s > best) { best = s; bestItem = c; }
+        }
+        // 최소 기준점 미만이면 추천하지 않음
+        if (bestItem != null && best >= floorTotal) return bestItem;
+        return null;
+    }
+
     /**
      * 총점 = (계절 약가점) + (스타일 점수) + (재질×강수 감점)
      */
     private int totalScore(Clothes c, String seasonNow, String anchorStyle,
-        String precipitation, Integer precipitationProb) {
+        String precipitation, Integer precipitationProb, Clothes anchor) {
         String itemSeason = attr(c, "계절");
         String itemStyle = attr(c, "스타일");
+
         int sSeason = seasonPreference(seasonNow, itemSeason);
         int sStyle = styleScore(anchorStyle, itemStyle);
         int sPenalty = materialPenalty(c, precipitation, precipitationProb);
+        int sThick = thicknessScore(c, anchor);
 
-        log.info("의상: {}, 점수 - Season: {}, Style: {}, Penalty: {}", c.getName(), sSeason , sStyle , sPenalty);
-        return sSeason + sStyle + sPenalty;
+        int total = sSeason + sStyle + sPenalty + sThick;
+        log.info("의상: {}, 점수 - Season:{}, Style:{}, Penalty:{}, Thick:{}, Total:{}",
+            c.getName(), sSeason, sStyle, sPenalty, sThick, total);
+        return total;
     }
 
     /**
@@ -269,8 +294,8 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
             return a;
         }
         String anchorStyle = (anchor == null) ? null : attr(anchor, "스타일");
-        int sa = totalScore(a, seasonNow, anchorStyle, precipitation, precipitationProb);
-        int sb = totalScore(b, seasonNow, anchorStyle, precipitation, precipitationProb);
+        int sa = totalScore(a, seasonNow, anchorStyle, precipitation, precipitationProb, anchor);
+        int sb = totalScore(b, seasonNow, anchorStyle, precipitation, precipitationProb, anchor);
         return (sa >= sb) ? a : b;
     }
 
@@ -392,6 +417,74 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         return 0;
     }
 
+    // ───── 두께 점수(앵커/체감 연동) ─────
+
+    private int thicknessScore(Clothes c, Clothes anchor) {
+        String t = attr(c, "두께"); // "얇음"/"보통"/"두꺼움"
+        if (t == null || t.isBlank()) return 0;
+
+        // 1) 기본: 체감온도 기반 가점/감점
+        int base = switch (c.getType()) {
+            case TOP, DRESS -> scoreTopLike(t, lastPtDay);
+            case OUTER      -> scoreOuter(t, lastPtNight);
+            default         -> 0; // 하의/신발/모자/머플러 등은 영향 없음
+        };
+
+//        return base;
+
+        // 2) 레이어링 상호작용
+        int layering = 0;
+        if (c.getType() == ClothesType.TOP) {
+            if (anchor != null && anchor.getType() == ClothesType.OUTER) {
+                String outerThick = attr(anchor, "두께");
+                if ("얇음".equals(outerThick)) {
+                    // 얇은 아우터 입으면 상의는 조금 더 얇게 OK
+                    if ("얇음".equals(t)) layering += 2;
+                    else if ("보통".equals(t)) layering += 1;
+                } else if ("보통".equals(outerThick)) {
+                    // 보통 아우터면 상의 얇음/보통 모두 무난
+                    if ("얇음".equals(t) || "보통".equals(t)) layering += 1;
+                }
+            } else {
+                // 아우터 미착용: 경계 구간(18~22°C)에서 '보통'(예: 후드티) 선호
+                if (lastPtDay >= 18 && lastPtDay <= 22 && "보통".equals(t)) layering += 2;
+            }
+        }
+
+        return base + layering;
+    }
+
+    // ptDay 구간별 TOP/DRESS 두께 점수(현실 감각 기본값)
+    private int scoreTopLike(String t, double ptDay) {
+        if (ptDay >= 27) {
+            return switch (t) { case "얇음" -> +5; case "보통" -> -2; case "두꺼움" -> -20; default -> -5; };
+        } else if (ptDay >= 23) {
+            return switch (t) { case "얇음" -> +4; case "보통" -> +2; case "두꺼움" -> -20; default -> -5; };
+        } else if (ptDay >= 18) {
+            return switch (t) { case "얇음" -> +2; case "보통" -> +3; case "두꺼움" ->  0; default -> 0; };
+        } else if (ptDay >= 12) {
+            return switch (t) { case "얇음" -> -2; case "보통" -> +4; case "두꺼움" -> +2; default -> -2; };
+        } else {
+            return switch (t) { case "얇음" -> -10; case "보통" -> 0; case "두꺼움" -> +4; default -> -5; };
+        }
+    }
+
+    // ptNight 구간별 OUTER 두께 점수
+    private int scoreOuter(String t, double ptNight) {
+        if (ptNight > 23) {
+            return switch (t) { case "얇음" -> -2; case "보통" -> -5; case "두꺼움" -> -20; default -> -20; };
+        } else if (ptNight >= 18) {
+            return switch (t) { case "얇음" -> +4; case "보통" -> -2; case "두꺼움" -> -10; default -> -10; };
+        } else if (ptNight >= 14) {
+            return switch (t) { case "얇음" -> +2; case "보통" -> +3; case "두꺼움" -> -10; default -> -10; };
+        } else if (ptNight >= 10) {
+            return switch (t) { case "얇음" ->  0; case "보통" -> +4; case "두꺼움" -> -2; default -> 0; };
+        } else {
+            return switch (t) { case "얇음" -> -10; case "보통" ->  0; case "두꺼움" -> +4; default -> 0; };
+        }
+    }
+
+
     // ────────────────────────────────────────────────────────────────────────
     // 스타일 점수(Map 기반)
     // ────────────────────────────────────────────────────────────────────────
@@ -446,10 +539,10 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
 
     private static String seasonByMonth(Instant utc) {
         int m = utc.atZone(KST).getMonthValue();
-        if (m >= 3 && m <= 6) {
+        if (m >= 3 && m <= 5) {
             return "봄";
         }
-        if (m >= 7 && m <= 8) {
+        if (m >= 6 && m <= 8) {
             return "여름";
         }
         if (m >= 9 && m <= 11) {
