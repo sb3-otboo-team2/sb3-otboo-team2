@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.recommendation.service.impl;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.ikuzo.otboo.domain.recommendation.dto.OotdDto;
 import org.ikuzo.otboo.domain.recommendation.dto.RecommendationDto;
 import org.ikuzo.otboo.domain.recommendation.service.RecommendationService;
 import org.ikuzo.otboo.domain.recommendation.service.engine.RecommendationEngine;
+import org.ikuzo.otboo.domain.recommendation.temp.KmaPerceivedTemperature;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.ikuzo.otboo.domain.weather.exception.WeatherNotFoundException;
@@ -44,6 +46,22 @@ public class RecommendationServiceImpl implements RecommendationService {
         log.info("[Service] 의상 추천 완료 - clothes: {}", clothesDtos);
 
         return toResponse(weather.getId(), owner.getId(), clothesDtos);
+    }
+
+    @Override
+    public double test(UUID weatherId) {
+        log.info("[Service] 체감온도 계산 시작 - weatherId: {}", weatherId);
+
+        Weather weather = weatherRepository.findById(weatherId)
+            .orElseThrow(WeatherNotFoundException::new);
+
+        double ta = weather.getTemperatureCurrent();
+        double rh = weather.getHumidityCurrent();
+        double windMs = weather.getWindSpeed(); // m/s
+        Instant forecastTime = weather.getForecastedAt();
+
+        return KmaPerceivedTemperature.compute(ta,rh,windMs,forecastTime);
+
     }
 
     private RecommendationDto toResponse(UUID weatherId, UUID ownerId, List<OotdDto> clothes) {
