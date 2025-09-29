@@ -34,9 +34,13 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
     private double lastPtDay;
     private double lastPtNight;
 
-    // ===== 튜닝 상수 =====
+    // 아우터 추천 기준
     private static final double OUTER_NEED_NIGHT_COOL = 20.0; // ptNight ≤ 20 → 아우터 필요
     private static final double OUTER_NEED_CURRENT_HOT = 23.0; // 현재 온도를 기반으로 아우터 판단
+
+    // 과도기 온도 기준
+    private static final double MARCH_COLD_PT = 12.0;  // 이하면 겨울로 보는 쪽
+    private static final double SEPT_HOT_PT   = 25.0;  // 이상이면 여름으로 보는 쪽
 
     // 계절 약가점
     private static final int SEASON_PREF_EXACT = 3;  // 현재 계절 정확 일치
@@ -95,7 +99,7 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         this.lastPtDay = ptDay;
         this.lastPtNight = ptNight;
 
-        final String seasonNow = seasonByMonth(forecastUtc); // "봄/여름/가을/겨울"
+        final String seasonNow = seasonByMonthWithTransition(forecastUtc, ptDay); // "봄/여름/가을/겨울"
         final String precipitation = enumName(weather.getPrecipitationType()); // "RAIN"/"SNOW"/"NONE"...
         final Integer precipitationProb = toInt(weather.getPrecipitationProbability()); // null 가능
 
@@ -219,26 +223,6 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         return result;
     }
 
-    /**
-     * 같은 타입 리스트에서 최고 득점 1개
-     */
-    private Clothes pickBest(List<Clothes> list, String seasonNow, Clothes anchor, String precipitation, Integer precipitationProb) {
-        if (list == null || list.isEmpty()) {
-            return null;
-        }
-        String anchorStyle = (anchor == null) ? null : attr(anchor, "스타일");
-        int best = 0;
-        Clothes bestItem = null;
-        for (Clothes c : list) {
-            int s = totalScore(c, seasonNow, anchorStyle, precipitation, precipitationProb, anchor);
-            if (s > best) {
-                best = s;
-                bestItem = c;
-            }
-        }
-        return bestItem;
-    }
-
     private Clothes pickBestWithFloor(List<Clothes> list, String seasonNow, Clothes anchor, String precipitation,
         Integer precipitationProb, int floorTotal) {
         if (list == null || list.isEmpty()) return null;
@@ -255,7 +239,7 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
     }
 
     /**
-     * 총점 = (계절 약가점) + (스타일 점수) + (재질×강수 감점)
+     * 총점 = (계절 점수) + (스타일 점수) + (재질×강수 감점) + (두께 점수)
      */
     private int totalScore(Clothes c, String seasonNow, String anchorStyle,
         String precipitation, Integer precipitationProb, Clothes anchor) {
@@ -293,46 +277,6 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         return (sa >= sb) ? a : b;
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // 필터: 계절/두께
-    // ────────────────────────────────────────────────────────────────────────
-
-    /**
-     * 계절 필터: 봄&가을, 여름, 겨울, 사계절로 구분 (사계절은 모든 계절에 통과)
-     */
-    private boolean seasonAllowedStrict(Clothes c, String now) {
-        String s = attr(c, "계절");
-        if (s == null || s.isBlank()) {
-            return false;
-        }
-        if ("사계절".equals(s)) {
-            return true;
-        }
-
-        return switch (now) {
-            case "봄", "가을" -> ("봄".equals(s) || "가을".equals(s));
-            case "여름" -> "여름".equals(s);
-            case "겨울" -> "겨울".equals(s);
-            default -> true;
-        };
-    }
-
-    private int seasonPreference(String now, String item) {
-        if (item == null || item.isBlank()) {
-            return 0;
-        }
-        if ("사계절".equals(item)) {
-            return SEASON_PREF_ALL;
-        }
-        if (item.equals(now)) {
-            return SEASON_PREF_EXACT;
-        }
-        if (("봄".equals(now) && "가을".equals(item)) || ("가을".equals(now) && "봄".equals(item))) {
-            return SEASON_PREF_PAIR;
-        }
-        return 0;
-    }
-
     /** 계절 가점(정확 +2, 봄↔가을 +1, 사계절 +1, 그 외 0) ★ 변경 */
     private int seasonAffinityScore(String now, String item) {
         if (item == null || item.isBlank()) return 0;
@@ -344,45 +288,6 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
                 ("여름".equals(now) &&  "가을".equals(item)) ||
                 ("겨울".equals(now) &&  "봄".equals(item));
         return weakPair ? SEASON_PREF_PAIR : 0;
-    }
-
-    /**
-     * 두께 필터: OUTER=ptNight 기준, TOP=ptDay 기준 (없으면 통과)
-     */
-    private boolean thicknessAllowed(Clothes c, double ptDay, double ptNight) {
-        String t = attr(c, "두께"); // 얇음/보통/두꺼움
-        if (t == null || t.isBlank()) {
-            return true;
-        }
-
-        if (c.getType() == ClothesType.OUTER) {
-            if (ptNight > 21) {
-                return false;
-            }
-            if (ptNight > 18) {
-                return t.equals("얇음");
-            }
-            if (ptNight > 15) {
-                return t.equals("얇음") || t.equals("보통");
-            }
-            if (ptNight >= 9) {
-                return t.equals("보통");
-            }
-            return t.equals("두꺼움");
-        }
-        if (c.getType() == ClothesType.TOP) {
-            if (ptDay > 26) {
-                return t.equals("얇음");
-            }
-            if (ptDay > 23) {
-                return t.equals("얇음") || t.equals("보통");
-            }
-            if (ptDay > 8) {
-                return t.equals("보통");
-            }
-            return t.equals("보통") || t.equals("두꺼움");
-        }
-        return true;
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -437,9 +342,7 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
             default         -> 0; // 하의/신발/모자/머플러 등은 영향 없음
         };
 
-//        return base;
-
-        // 2) 레이어링 상호작용
+        // 레이어링 상호작용
         int layering = 0;
         if (c.getType() == ClothesType.TOP) {
             if (anchor != null && anchor.getType() == ClothesType.OUTER) {
@@ -461,7 +364,7 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         return base + layering;
     }
 
-    // ptDay 구간별 TOP/DRESS 두께 점수(현실 감각 기본값)
+    // ptDay 구간별 TOP/DRESS 두께 점수
     private int scoreTopLike(String t, double ptDay) {
         if (ptDay >= 27) {
             return switch (t) { case "얇음" -> +5; case "보통" -> -2; case "두꺼움" -> -20; default -> -5; };
@@ -544,6 +447,20 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         return temp + (sensitive - 3);
     }
 
+    private static String seasonByMonthWithTransition(Instant utc, double ptDay) {
+        int m = utc.atZone(KST).getMonthValue();
+        if (m == 3) {
+            if (ptDay <= MARCH_COLD_PT) return "겨울";
+            return "봄";
+        }
+        if (m == 9) {
+            if (ptDay >= SEPT_HOT_PT) return "여름";
+            return "가을";
+        }
+        // 나머지는 기존 월 베이스
+        return seasonByMonth(utc);
+    }
+
     private static String seasonByMonth(Instant utc) {
         int m = utc.atZone(KST).getMonthValue();
         if (m >= 3 && m <= 5) {
@@ -615,5 +532,105 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         if (c != null) {
             list.add(c);
         }
+    }
+    // ------------------------------------ 예전 메소드 -------------------------------------------
+
+    /**
+     * 같은 타입 리스트에서 최고 득점 1개
+     */
+    private Clothes pickBest(List<Clothes> list, String seasonNow, Clothes anchor, String precipitation, Integer precipitationProb) {
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        String anchorStyle = (anchor == null) ? null : attr(anchor, "스타일");
+        int best = 0;
+        Clothes bestItem = null;
+        for (Clothes c : list) {
+            int s = totalScore(c, seasonNow, anchorStyle, precipitation, precipitationProb, anchor);
+            if (s > best) {
+                best = s;
+                bestItem = c;
+            }
+        }
+        return bestItem;
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // 필터: 계절/두께
+    // ────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 계절 필터: 봄&가을, 여름, 겨울, 사계절로 구분 (사계절은 모든 계절에 통과)
+     */
+    private boolean seasonAllowedStrict(Clothes c, String now) {
+        String s = attr(c, "계절");
+        if (s == null || s.isBlank()) {
+            return false;
+        }
+        if ("사계절".equals(s)) {
+            return true;
+        }
+
+        return switch (now) {
+            case "봄", "가을" -> ("봄".equals(s) || "가을".equals(s));
+            case "여름" -> "여름".equals(s);
+            case "겨울" -> "겨울".equals(s);
+            default -> true;
+        };
+    }
+
+    private int seasonPreference(String now, String item) {
+        if (item == null || item.isBlank()) {
+            return 0;
+        }
+        if ("사계절".equals(item)) {
+            return SEASON_PREF_ALL;
+        }
+        if (item.equals(now)) {
+            return SEASON_PREF_EXACT;
+        }
+        if (("봄".equals(now) && "가을".equals(item)) || ("가을".equals(now) && "봄".equals(item))) {
+            return SEASON_PREF_PAIR;
+        }
+        return 0;
+    }
+
+    /**
+     * 두께 필터: OUTER=ptNight 기준, TOP=ptDay 기준 (없으면 통과)
+     */
+    private boolean thicknessAllowed(Clothes c, double ptDay, double ptNight) {
+        String t = attr(c, "두께"); // 얇음/보통/두꺼움
+        if (t == null || t.isBlank()) {
+            return true;
+        }
+
+        if (c.getType() == ClothesType.OUTER) {
+            if (ptNight > 21) {
+                return false;
+            }
+            if (ptNight > 18) {
+                return t.equals("얇음");
+            }
+            if (ptNight > 15) {
+                return t.equals("얇음") || t.equals("보통");
+            }
+            if (ptNight >= 9) {
+                return t.equals("보통");
+            }
+            return t.equals("두꺼움");
+        }
+        if (c.getType() == ClothesType.TOP) {
+            if (ptDay > 26) {
+                return t.equals("얇음");
+            }
+            if (ptDay > 23) {
+                return t.equals("얇음") || t.equals("보통");
+            }
+            if (ptDay > 8) {
+                return t.equals("보통");
+            }
+            return t.equals("보통") || t.equals("두꺼움");
+        }
+        return true;
     }
 }
