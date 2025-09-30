@@ -7,6 +7,7 @@ import org.ikuzo.otboo.domain.user.dto.ProfileDto;
 import org.ikuzo.otboo.domain.user.dto.ProfileUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserDto;
+import org.ikuzo.otboo.domain.user.dto.UserLockUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserRoleUpdateRequest;
 import org.ikuzo.otboo.global.dto.PageResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,4 +29,5 @@ public interface UserService {
         String roleEqual,
         Boolean locked
     );
+    UserDto updateLock(UUID userId, UserLockUpdateRequest request);
 }

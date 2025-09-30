@@ -10,6 +10,7 @@ import org.ikuzo.otboo.domain.user.dto.ProfileDto;
 import org.ikuzo.otboo.domain.user.dto.ProfileUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserDto;
+import org.ikuzo.otboo.domain.user.dto.UserLockUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserRoleUpdateRequest;
 import org.ikuzo.otboo.domain.user.service.UserService;
 import org.ikuzo.otboo.global.dto.PageResponse;
@@ -126,6 +127,18 @@ public class UserController {
         );
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @PatchMapping(path = "/{userId}/lock")
+    public ResponseEntity<UserDto> updateLock(
+        @PathVariable("userId") UUID userId,
+        @RequestBody UserLockUpdateRequest request
+    ) {
+        log.info("계정 잠금 상태 변경 요청: id={}", userId);
+
+        UserDto userDto = userService.updateLock(userId, request);
+
+        return ResponseEntity.ok(userDto);
     }
 
 }

@@ -134,4 +134,10 @@ public class User extends BaseUpdatableEntity {
             this.password = newPassword;
         }
     }
+
+    public void updateLock(Boolean newLocked) {
+        if (newLocked != null && !newLocked.equals(this.locked)) {
+            this.locked = newLocked;
+        }
+    }
 }
