@@ -170,10 +170,16 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
 
     // ───────── 내부 선택 로직 ─────────
 
+    /**
+     * 저녁 온도 < 20 || 현재 온도 < 23 이면 아우터가 필요한 상황으로 판정
+     */
     private boolean isOuterNeeded(double ptDay, double ptNight) {
         return ptNight <= OUTER_NEED_NIGHT_COOL || ptDay <= OUTER_NEED_CURRENT_HOT;
     }
 
+    /**
+     * 아우터가 불필요한 경우의 의상 추천 로직
+     */
     private List<Clothes> pickWithoutOuter(
         Map<ClothesType, List<Clothes>> byType,
         String seasonNow,
@@ -232,6 +238,10 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
         return result;
     }
 
+    /**
+     * 최고 점수를 받은 의상을 기준으로 1점 이내의 의상들을 랜덤 추천
+     * 임계점을 통과 못 하면 해당 카테고리는 추천하지 않음
+     */
     private Clothes pickBestWithFloor(
         List<Clothes> list,
         String seasonNow,
