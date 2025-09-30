@@ -8,6 +8,7 @@ import org.ikuzo.otboo.domain.user.dto.ProfileUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserDto;
 import org.ikuzo.otboo.domain.user.dto.UserRoleUpdateRequest;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
@@ -17,4 +18,14 @@ public interface UserService {
     UserDto updateRole(UUID userId, UserRoleUpdateRequest request);
     UserDto updateRoleInternal(UUID userId, UserRoleUpdateRequest request);
     void changePassword(UUID userId, ChangePasswordRequest request);
+    PageResponse<UserDto> getUsers(
+        String cursor,
+        UUID idAfter,
+        Integer limit,
+        String sortBy,
+        String sortDirection,
+        String emailLike,
+        String roleEqual,
+        Boolean locked
+    );
 }
