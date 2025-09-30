@@ -199,7 +199,8 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
             precipitation, precipitationProb, FLOOR_PRIMARY, ptDay, ptNight);
 
         log.info("모든 상의 후보 수: {}", byType.getOrDefault(ClothesType.TOP, List.of()).size());
-        log.info("상의 - {}, 드레스 - {}", topCandidate.getName(), dressCandidate.getName());
+        log.info("상의 - {}, 드레스 - {}",
+            topCandidate != null ? topCandidate.getName() : "없음", dressCandidate != null ? dressCandidate.getName() : "없음");
 
         Clothes primary = betterOf(topCandidate, dressCandidate, seasonNow, null,
             precipitation, precipitationProb, ptDay, ptNight);
