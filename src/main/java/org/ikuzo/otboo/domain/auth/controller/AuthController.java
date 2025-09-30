@@ -15,7 +15,9 @@ import org.ikuzo.otboo.domain.user.dto.UserRoleUpdateRequest;
 import org.ikuzo.otboo.global.security.JwtTokenProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -57,5 +59,14 @@ public class AuthController {
         log.info("비밀번호 초기화 요청: email={}", request.email());
         authService.resetPassword(request);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("csrf-token")
+    public ResponseEntity<Void> getCsrfToken(CsrfToken csrfToken) {
+        log.debug("CSRF 토큰 요청");
+        log.trace("CSRF 토큰: {}", csrfToken.getToken());
+        return ResponseEntity
+            .status(HttpStatus.NO_CONTENT)
+            .build();
     }
 }
