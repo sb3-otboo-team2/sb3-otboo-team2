@@ -64,7 +64,7 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
     private static final int PENALTY_SNOW_LEATHER = 2;
 
     // 동률/근접 후보 내 다양성
-    private static final int NEAR_BEST_DELTA = 1;
+    private static final int NEAR_BEST_DELTA = 2;
 
     private static final Map<String, Set<String>> COMPAT = Map.of(
         "캐주얼", Set.of("캐주얼", "빈티지", "러블리"),
@@ -127,7 +127,9 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
                 precipitation, precipitationProb, FLOOR_PRIMARY, ptDay, ptNight);
             Clothes dress = pickBestWithFloor(byType.get(ClothesType.DRESS), seasonNow, outer,
                 precipitation, precipitationProb, FLOOR_PRIMARY, ptDay, ptNight);
+            log.info("상의 vs 드레스 비교");
             Clothes inner = betterOf(top, dress, seasonNow, outer, precipitation, precipitationProb, ptDay, ptNight);
+            log.info("아우터의 inner로 골라진 첫 의상 - {}", inner == null ? null : inner.getName());
 
             if (inner != null) {
                 result.add(inner);
@@ -197,11 +199,11 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
             precipitation, precipitationProb, FLOOR_PRIMARY, ptDay, ptNight);
 
         log.info("모든 상의 후보 수: {}", byType.getOrDefault(ClothesType.TOP, List.of()).size());
-        log.info("상의 - {}, 드레스 - {}", topCandidate, dressCandidate);
+        log.info("상의 - {}, 드레스 - {}", topCandidate.getName(), dressCandidate.getName());
 
         Clothes primary = betterOf(topCandidate, dressCandidate, seasonNow, null,
             precipitation, precipitationProb, ptDay, ptNight);
-        log.info("아우터가 필요 없는 상황에서 골라진 메인 - {}", primary);
+        log.info("아우터가 필요 없는 상황에서 골라진 첫 의상 - {}", primary == null ? null : primary.getName());
 
         if (primary != null) {
             result.add(primary);
@@ -332,10 +334,12 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
         if (b == null) return a;
 
         String anchorStyle = (anchor == null) ? null : attr(anchor, "스타일");
-        int sa = totalScore(a, seasonNow, anchorStyle, precipitation, precipitationProb, anchor,
-            ptDay, ptNight);
-        int sb = totalScore(b, seasonNow, anchorStyle, precipitation, precipitationProb, anchor,
-            ptDay, ptNight);
+        int sa = totalScore(a, seasonNow, anchorStyle, precipitation, precipitationProb, anchor, ptDay, ptNight);
+        int sb = totalScore(b, seasonNow, anchorStyle, precipitation, precipitationProb, anchor, ptDay, ptNight);
+
+        if (Math.abs(sa - sb) <= NEAR_BEST_DELTA) {
+            return ThreadLocalRandom.current().nextBoolean() ? a : b;
+        }
 
         return (sa >= sb) ? a : b;
     }
