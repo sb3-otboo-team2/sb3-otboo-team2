@@ -178,10 +178,7 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
      * 아우터 필요: (1) 밤 체감 ≤ 20°C, (2) 낮 체감 ≤ 23°C
      */
     private boolean isOuterNeeded(double ptDay, double ptNight) {
-        if (ptNight <= OUTER_NEED_NIGHT_COOL || ptDay <= OUTER_NEED_CURRENT_HOT) {
-            return true;
-        }
-        return false;
+        return ptNight <= OUTER_NEED_NIGHT_COOL || ptDay <= OUTER_NEED_CURRENT_HOT;
     }
 
     private List<Clothes> pickWithoutOuter(Map<ClothesType, List<Clothes>> byType, String seasonNow, String precipitation, Integer precipitationProb
