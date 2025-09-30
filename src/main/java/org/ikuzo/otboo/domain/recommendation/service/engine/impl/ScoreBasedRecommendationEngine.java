@@ -16,7 +16,7 @@ import org.ikuzo.otboo.domain.clothes.entity.ClothesAttribute;
 import org.ikuzo.otboo.domain.clothes.enums.ClothesType;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesRepository;
 import org.ikuzo.otboo.domain.recommendation.service.engine.RecommendationEngine;
-import org.ikuzo.otboo.domain.recommendation.temp.KmaPerceivedTemperature;
+import org.ikuzo.otboo.domain.recommendation.util.KmaPerceivedTemperature;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.springframework.context.annotation.Primary;
@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class RuleBasedRecommendationEngine implements RecommendationEngine {
+public class ScoreBasedRecommendationEngine implements RecommendationEngine {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 

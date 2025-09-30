@@ -11,7 +11,7 @@ import org.ikuzo.otboo.domain.recommendation.dto.OotdDto;
 import org.ikuzo.otboo.domain.recommendation.dto.RecommendationDto;
 import org.ikuzo.otboo.domain.recommendation.service.RecommendationService;
 import org.ikuzo.otboo.domain.recommendation.service.engine.RecommendationEngine;
-import org.ikuzo.otboo.domain.recommendation.temp.KmaPerceivedTemperature;
+import org.ikuzo.otboo.domain.recommendation.util.KmaPerceivedTemperature;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.ikuzo.otboo.domain.weather.exception.WeatherNotFoundException;
