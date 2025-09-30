@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,23 +51,26 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
     // 타입별 추천 최소 총점
     private static final int FLOOR_PRIMARY          = 2; // TOP/DRESS
     private static final int FLOOR_BOTTOM           = 1; // BOTTOM
-    private static final int FLOOR_OUTER_REQUIRED   = 1; // OUTER(필수 모드에서조차 이 미만이면 생략)
-    private static final int FLOOR_MISC             = 0; // SHOES/HAT/SCARF
+    private static final int FLOOR_OUTER_REQUIRED   = 2; // OUTER
+    private static final int FLOOR_MISC             = 2; // SHOES/HAT/SCARF
 
-    // ===== 스타일 점수(맵 기반) =====
+    // 스타일 점수(맵 기반)
     private static final int STYLE_EXACT = 5; // 동일 스타일
     private static final int STYLE_COMPAT = 3; // 호환/공용
     private static final int STYLE_DEFAULT = 0; // 그 외
     private static final String STYLE_ANY = "기본";
 
-    // ===== 재질 감점(강수 확률 ≥50%) =====
+    // 재질 감점(강수 확률 ≥50%)
     private static final int PENALTY_RAIN_SUEDE = 3; // 비+스웨이드
     private static final int PENALTY_RAIN_LEATHER = 2; // 비+가죽/레더
     private static final int PENALTY_SNOW_SUEDE = 3; // 눈+스웨이드
     private static final int PENALTY_SNOW_LEATHER = 2; // 눈+가죽/레더
 
+    // 동률/근접 후보 내 다양성 설정
+    private static final int NEAR_BEST_DELTA = 2; // best-2점까지 후보군으로 인정
+
     /**
-     * 스타일 호환표(앵커→호환집합). 필요 시 항목만 튜닝
+     * 스타일 호환표(앵커→호환집합)
      */
     private static final Map<String, Set<String>> COMPAT = Map.of(
         "캐주얼", Set.of("캐주얼", "빈티지", "러블리"),
@@ -227,15 +231,28 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
         Integer precipitationProb, int floorTotal) {
         if (list == null || list.isEmpty()) return null;
         String anchorStyle = (anchor == null) ? null : attr(anchor, "스타일");
-        int best = Integer.MIN_VALUE;
-        Clothes bestItem = null;
+
+        List<Clothes> passed = new ArrayList<>();
+        List<Integer> scores = new ArrayList<>();
+        int bestPassed = Integer.MIN_VALUE;
+
         for (Clothes c : list) {
             int s = totalScore(c, seasonNow, anchorStyle, precipitation, precipitationProb, anchor);
-            if (s > best) { best = s; bestItem = c; }
+            if (s >= floorTotal) {
+                passed.add(c);
+                scores.add(s);
+                if (s > bestPassed) bestPassed = s;
+            }
         }
-        // 최소 기준점 미만이면 추천하지 않음
-        if (bestItem != null && best >= floorTotal) return bestItem;
-        return null;
+        if (passed.isEmpty()) return null;
+
+        int cutoff = bestPassed - NEAR_BEST_DELTA;
+        List<Clothes> pool = new ArrayList<>();
+        for (int i = 0; i < passed.size(); i++) {
+            if (scores.get(i) >= cutoff) pool.add(passed.get(i));
+        }
+
+        return pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
     }
 
     /**
@@ -382,7 +399,7 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
     // ptNight 구간별 OUTER 두께 점수
     private int scoreOuter(String t, double ptNight) {
         if (ptNight > 23) {
-            return switch (t) { case "얇음" -> -2; case "보통" -> -5; case "두꺼움" -> -20; default -> -20; };
+            return switch (t) { case "얇음" -> -2; case "보통" -> -7; case "두꺼움" -> -20; default -> -20; };
         } else if (ptNight >= 18) {
             return switch (t) { case "얇음" -> +4; case "보통" -> -2; case "두꺼움" -> -10; default -> -10; };
         } else if (ptNight >= 14) {
@@ -457,7 +474,6 @@ public class RuleBasedRecommendationEngine implements RecommendationEngine {
             if (ptDay >= SEPT_HOT_PT) return "여름";
             return "가을";
         }
-        // 나머지는 기존 월 베이스
         return seasonByMonth(utc);
     }
 
