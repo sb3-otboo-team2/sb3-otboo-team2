@@ -10,6 +10,7 @@ import org.ikuzo.otboo.domain.user.dto.ProfileDto;
 import org.ikuzo.otboo.domain.user.dto.ProfileUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserDto;
+import org.ikuzo.otboo.domain.user.dto.UserLockUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserRoleUpdateRequest;
 import org.ikuzo.otboo.domain.user.entity.Role;
 import org.ikuzo.otboo.domain.user.entity.User;
@@ -139,6 +140,21 @@ public class UserServiceImpl implements UserService {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
+    public UserDto updateLock(UUID userId, UserLockUpdateRequest request) {
+        log.debug("계정 잠금 상태 변경 시작: id={}", userId);
+
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> UserNotFoundException.withId(userId));
+
+        user.updateLock(request.locked());
+
+        log.info("계정 잠금 상태 변경 완료: id={}", userId);
+
+        return userMapper.toDto(user);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
     public PageResponse<UserDto> getUsers(
         String cursor,
         UUID idAfter,
