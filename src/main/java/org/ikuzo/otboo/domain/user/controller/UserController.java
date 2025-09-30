@@ -12,6 +12,7 @@ import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserDto;
 import org.ikuzo.otboo.domain.user.dto.UserRoleUpdateRequest;
 import org.ikuzo.otboo.domain.user.service.UserService;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -96,6 +98,34 @@ public class UserController {
         userService.changePassword(userId, request);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping
+    public ResponseEntity<PageResponse<UserDto>> getUsers(
+        @RequestParam(required = false) String cursor,
+        @RequestParam(required = false) UUID idAfter,
+        @RequestParam(defaultValue = "10") Integer limit,
+        @RequestParam(defaultValue = "email") String sortBy,
+        @RequestParam(defaultValue = "DESCENDING") String sortDirection,
+        @RequestParam(required = false) String emailLike,
+        @RequestParam(required = false) String roleEqual,
+        @RequestParam(required = false) Boolean locked
+    ) {
+        log.info("계정 목록 조회 요청 - sortBy: {}, sortDirection: {}, emailLike: {}, roleEqual: {}, locked: {}",
+            sortBy, sortDirection, emailLike, roleEqual, locked);
+
+        PageResponse<UserDto> response = userService.getUsers(
+            cursor,
+            idAfter,
+            limit,
+            sortBy,
+            sortDirection,
+            emailLike,
+            roleEqual,
+            locked
+        );
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
 }

@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.user.service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -16,11 +17,18 @@ import org.ikuzo.otboo.domain.user.exception.UserAlreadyExistsException;
 import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.mapper.UserMapper;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.ikuzo.otboo.global.util.ImageSwapHelper;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
@@ -132,6 +140,87 @@ public class UserServiceImpl implements UserService {
         user.changePassword(encodedPassword);
 
         log.info("비밀번호 변경 완료: id={}", userId);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public PageResponse<UserDto> getUsers(
+        String cursor,
+        UUID idAfter,
+        Integer limit,
+        String sortBy,
+        String sortDirection,
+        String emailLike,
+        String roleEqual,
+        Boolean locked
+    ) {
+        log.debug("계정 목록 조회 시작");
+
+        // 커서 기반으로 사용자 조회 (limit+1개 조회)
+        List<User> users = userRepository.findUsersWithCursor(
+            cursor,
+            idAfter,
+            limit,
+            sortBy,
+            sortDirection,
+            emailLike,
+            roleEqual,
+            locked
+        );
+
+        // 다음 페이지 존재 여부 판단
+        boolean hasNext = users.size() > limit;
+        if (hasNext) {
+            users = users.subList(0, limit); // 실제 반환할 데이터만 남김
+        }
+
+        // Entity -> DTO 변환 (MapStruct 사용)
+        List<UserDto> userDtos = users.stream()
+            .map(userMapper::toDto) // UserMapper.toDto() 호출
+            .toList();
+
+        // 다음 커서 계산
+        Object nextCursor = null;
+        UUID nextIdAfter = null;
+
+        if (hasNext && !users.isEmpty()) {
+            User lastUser = users.get(users.size() - 1); // 마지막 데이터
+            nextCursor = getNextCursorValue(lastUser, sortBy);
+            nextIdAfter = lastUser.getId();
+        }
+
+        // 전체 개수 카운트 (필터 조건 동일하게 적용)
+        Long totalCount = userRepository.countUsersWithFilters(
+            emailLike,
+            roleEqual,
+            locked
+        );
+
+        // 응답 DTO 생성
+        return new PageResponse<>(
+            userDtos,       // 실제 데이터
+            nextCursor,     // 다음 페이지 커서
+            nextIdAfter,    // 다음 페이지 시작 ID
+            hasNext,        // 다음 페이지 존재 여부
+            totalCount,     // 전체 데이터 개수
+            sortBy,         // 정렬 기준
+            sortDirection   // 정렬 방향
+        );
+    }
+
+    /**
+     * 정렬 기준에 따라 다음 커서 값 추출
+     *
+     * @param user 마지막으로 조회된 사용자
+     * @param sortBy 정렬 기준 필드
+     * @return 다음 페이지 요청 시 사용할 커서 값
+     */
+    private Object getNextCursorValue(User user, String sortBy) {
+        return switch (sortBy) {
+            case "email" -> user.getEmail(); // 이메일 문자열
+            case "createdAt" -> user.getCreatedAt().toString(); // ISO-8601 형식 문자열
+            default -> user.getId().toString(); // UUID 문자열
+        };
     }
 
 }
