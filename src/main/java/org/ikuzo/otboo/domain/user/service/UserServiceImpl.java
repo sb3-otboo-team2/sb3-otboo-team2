@@ -144,6 +144,7 @@ public class UserServiceImpl implements UserService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @Override
     public PageResponse<UserDto> getUsers(
         String cursor,
         UUID idAfter,
