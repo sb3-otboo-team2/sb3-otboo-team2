@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.domain.recommendation.util;
+package org.ikuzo.otboo.domain.recommendation.support;
 
 import java.time.Instant;
 import java.time.ZoneId;
