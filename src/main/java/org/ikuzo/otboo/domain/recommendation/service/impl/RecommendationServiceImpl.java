@@ -48,22 +48,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         return toResponse(weather.getId(), owner.getId(), clothesDtos);
     }
 
-    @Override
-    public double test(UUID weatherId) {
-        log.info("[Service] 체감온도 계산 시작 - weatherId: {}", weatherId);
-
-        Weather weather = weatherRepository.findById(weatherId)
-            .orElseThrow(WeatherNotFoundException::new);
-
-        double ta = weather.getTemperatureCurrent();
-        double rh = weather.getHumidityCurrent();
-        double windMs = weather.getWindSpeed(); // m/s
-        Instant forecastTime = weather.getForecastedAt();
-
-        return KmaPerceivedTemperature.compute(ta,rh,windMs,forecastTime);
-
-    }
-
     private RecommendationDto toResponse(UUID weatherId, UUID ownerId, List<OotdDto> clothes) {
         return RecommendationDto.builder()
             .weatherId(weatherId)

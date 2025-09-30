@@ -42,16 +42,4 @@ public class RecommendationController implements RecommendationApi {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @GetMapping("/{weatherId}")
-    public ResponseEntity<Double> test(
-        @PathVariable UUID weatherId
-    ) {
-        log.info("[Controller] 체감온도 계산 요청 - weatherId: {}", weatherId);
-
-        double response = recommendationService.test(weatherId);
-
-        log.info("[Controller] 체감온도 계산 완료 - 체감 온도: {}", response);
-
-        return ResponseEntity.status(HttpStatus.OK).body(response);
-    }
 }

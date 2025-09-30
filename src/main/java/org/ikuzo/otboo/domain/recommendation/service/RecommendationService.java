@@ -7,5 +7,4 @@ public interface RecommendationService {
 
     RecommendationDto create(UUID weatherId);
 
-    double test(UUID weatherId);
 }
