@@ -84,7 +84,7 @@ public class FollowServiceImpl implements FollowService {
 
         FollowDto dto = followMapper.toDto(savedFollow, followeeSummary, followerSummary);
 
-        evictFollowCaches(followeeId, followee.getEmail(), followerId, follower.getEmail());
+        evictFollowCaches(followeeId, followerId);
 
         eventPublisher.publishEvent(
             new FollowCreatedEvent(
@@ -105,7 +105,7 @@ public class FollowServiceImpl implements FollowService {
     @Transactional(readOnly = true)
     @Cacheable(
         cacheNames = "followSummary",
-        key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '_' + #userId"
+        key = "#userId"
     )
     public FollowSummaryDto followSummary(UUID userId) {
         log.info("[FollowService] followSummary 팔로우 요약 정보 userId: {}", userId);
@@ -261,19 +261,18 @@ public class FollowServiceImpl implements FollowService {
 
         followRepository.delete(follow);
 
-        evictFollowCaches(followeeId, follow.getFollowing().getEmail(), followerId, follow.getFollower().getEmail());
+        evictFollowCaches(followeeId, followerId);
 
         log.info("[FollowService] 팔로우 취소 완료");
     }
 
-    private void evictFollowCaches(UUID followeeId, String followeeEmail, UUID followerId, String followerEmail) {
+    private void evictFollowCaches(UUID followeeId, UUID followerId) {
+        // 팔로워/팔로잉 목록 캐시 제거
         Objects.requireNonNull(cacheManager.getCache("followers")).evict(followeeId);
         Objects.requireNonNull(cacheManager.getCache("followings")).evict(followerId);
 
-        Objects.requireNonNull(cacheManager.getCache("followSummary"))
-            .evict(followerEmail + "_" + followeeId);
-
-        Objects.requireNonNull(cacheManager.getCache("followSummary"))
-            .evict(followeeEmail + "_" + followerId);
+        // 팔로우 요약 캐시 제거 (userId 기준으로 단순화)
+        Objects.requireNonNull(cacheManager.getCache("followSummary")).evict(followeeId);
+        Objects.requireNonNull(cacheManager.getCache("followSummary")).evict(followerId);
     }
 }
