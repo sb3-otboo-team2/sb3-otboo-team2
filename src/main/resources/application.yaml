@@ -65,6 +65,8 @@ spring:
           starttls:
             enable: true
             required: true
+  batch:
+    initialize-schema: ALWAYS
 otboo:
   jwt:
     access-token:
