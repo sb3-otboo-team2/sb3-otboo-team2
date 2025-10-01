@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono;
 
 @Component
 @RequiredArgsConstructor
-public class OpenAiHtmlExtractor {
+public class OpenAiClothesExtractor {
 
     private static final double OPENAI_TEMPERATURE = 0.0;
 

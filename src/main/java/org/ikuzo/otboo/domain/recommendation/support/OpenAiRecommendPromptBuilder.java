@@ -1,4 +1,4 @@
-package org.ikuzo.otboo.domain.recommendation.util;
+package org.ikuzo.otboo.domain.recommendation.support;
 
 import java.util.List;
 import lombok.NoArgsConstructor;
@@ -6,7 +6,7 @@ import org.ikuzo.otboo.domain.recommendation.dto.request.RecommendRequest;
 import org.ikuzo.otboo.domain.recommendation.dto.request.RecommendRequest.WardrobeItem;
 
 @NoArgsConstructor
-public class OpenAiPromptTemplates {
+public class OpenAiRecommendPromptBuilder {
 
     public static String systemPrompt() {
         return """
@@ -63,9 +63,8 @@ public class OpenAiPromptTemplates {
             # Output(JSON only)
             {
               "picks":[
-                {"id":"UUID","score": 87},
-                ...
-              ],
+                {"id":"UUID","score": 87}
+              ]
             }
             
             반드시 지킬 것:

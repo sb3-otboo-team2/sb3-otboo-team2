@@ -19,16 +19,14 @@ import org.ikuzo.otboo.domain.clothes.repository.ClothesRepository;
 import org.ikuzo.otboo.domain.recommendation.dto.request.RecommendRequest;
 import org.ikuzo.otboo.domain.recommendation.dto.response.RecommendResponse;
 import org.ikuzo.otboo.domain.recommendation.service.engine.RecommendationEngine;
-import org.ikuzo.otboo.domain.recommendation.util.OpenAiPromptTemplates;
+import org.ikuzo.otboo.domain.recommendation.support.OpenAiRecommendPromptBuilder;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-@Primary
 @Slf4j
 @Component
 public class LLMRecommendationEngine implements RecommendationEngine {
@@ -68,8 +66,8 @@ public class LLMRecommendationEngine implements RecommendationEngine {
 
         RecommendRequest request = toRequest(owner, weather, clothes);
 
-        String systemPrompt = OpenAiPromptTemplates.systemPrompt();
-        String userPrompt = OpenAiPromptTemplates.userPrompt(request);
+        String systemPrompt = OpenAiRecommendPromptBuilder.systemPrompt();
+        String userPrompt = OpenAiRecommendPromptBuilder.userPrompt(request);
 
         String content = Mono.defer(() -> callOpenAi(systemPrompt, userPrompt))
             .subscribeOn(Schedulers.boundedElastic())
@@ -100,8 +98,8 @@ public class LLMRecommendationEngine implements RecommendationEngine {
             owner.getId(),
             owner.getGender() == null ? null : owner.getGender().name(),
             owner.getTemperatureSensitivity(),
-            normalize(weather.getTemperatureCurrent()),
-            normalize(weather.getHumidityCurrent()),
+            weather.getTemperatureCurrent(),
+            weather.getHumidityCurrent(),
             weather.getSkyStatus() == null ? null : weather.getSkyStatus(),
             weather.getPrecipitationType() == null ? null : weather.getPrecipitationType(),
             weather.getWindSpeedWord() == null ? null : weather.getWindSpeedWord(),
@@ -170,7 +168,11 @@ public class LLMRecommendationEngine implements RecommendationEngine {
         }
 
         Map<UUID, Double> scoreMap = res.picks().stream()
-            .collect(Collectors.toMap(RecommendResponse.Pick::id, p -> normalize(p.score())));
+            .collect(Collectors.toMap(
+                RecommendResponse.Pick::id,
+                p -> normalize(p.score()),
+                Math::max
+            ));
 
         // 후보 id만 추림
         Set<UUID> idSet = scoreMap.keySet();

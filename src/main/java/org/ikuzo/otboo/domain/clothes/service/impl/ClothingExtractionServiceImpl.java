@@ -16,7 +16,7 @@ import org.ikuzo.otboo.domain.clothes.dto.ClothesDto;
 import org.ikuzo.otboo.domain.clothes.entity.AttributeOption;
 import org.ikuzo.otboo.domain.clothes.entity.ClothesAttributeDef;
 import org.ikuzo.otboo.domain.clothes.enums.ClothesType;
-import org.ikuzo.otboo.domain.clothes.extractions.OpenAiHtmlExtractor;
+import org.ikuzo.otboo.domain.clothes.extractions.OpenAiClothesExtractor;
 import org.ikuzo.otboo.domain.clothes.dto.ExtractClothes;
 import org.ikuzo.otboo.domain.clothes.parser.HtmlParserResolver;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
@@ -30,7 +30,7 @@ import reactor.core.publisher.Mono;
 public class ClothingExtractionServiceImpl implements ClothingExtractionService {
 
     private final HtmlParserResolver htmlParserResolver;
-    private final OpenAiHtmlExtractor llmExtractor;
+    private final OpenAiClothesExtractor llmExtractor;
     private final ClothesAttributeDefRepository defRepo;
 
     @Override
