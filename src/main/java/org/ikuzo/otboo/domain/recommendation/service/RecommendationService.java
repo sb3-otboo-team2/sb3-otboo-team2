@@ -6,4 +6,5 @@ import org.ikuzo.otboo.domain.recommendation.dto.RecommendationDto;
 public interface RecommendationService {
 
     RecommendationDto create(UUID weatherId);
+
 }

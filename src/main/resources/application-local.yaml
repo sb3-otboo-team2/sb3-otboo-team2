@@ -10,7 +10,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
   batch:
     jdbc:
       initialize-schema: always   # 최초 테이블 생성용 ! 생성 후에는 never로 바꿔주세요 !!
