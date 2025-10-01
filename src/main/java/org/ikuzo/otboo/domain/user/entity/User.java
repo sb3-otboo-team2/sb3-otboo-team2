@@ -128,4 +128,16 @@ public class User extends BaseUpdatableEntity {
             this.role = newRole;
         }
     }
+
+    public void changePassword(String newPassword) {
+        if (newPassword != null && !newPassword.equals(this.password)) {
+            this.password = newPassword;
+        }
+    }
+
+    public void updateLock(Boolean newLocked) {
+        if (newLocked != null && !newLocked.equals(this.locked)) {
+            this.locked = newLocked;
+        }
+    }
 }

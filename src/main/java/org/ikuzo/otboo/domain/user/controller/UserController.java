@@ -5,12 +5,15 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.domain.user.dto.ChangePasswordRequest;
 import org.ikuzo.otboo.domain.user.dto.ProfileDto;
 import org.ikuzo.otboo.domain.user.dto.ProfileUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserCreateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserDto;
+import org.ikuzo.otboo.domain.user.dto.UserLockUpdateRequest;
 import org.ikuzo.otboo.domain.user.dto.UserRoleUpdateRequest;
 import org.ikuzo.otboo.domain.user.service.UserService;
+import org.ikuzo.otboo.global.dto.PageResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -82,6 +86,58 @@ public class UserController {
     ) {
         log.info("권한 수정 요청");
         UserDto userDto = userService.updateRole(userId, request);
+        return ResponseEntity.ok(userDto);
+    }
+
+    @PatchMapping(path = "/{userId}/password")
+    public ResponseEntity<Void> changePassword(
+        @PathVariable("userId") UUID userId,
+        @RequestBody ChangePasswordRequest request
+    ) {
+        log.info("비밀번호 변경 요청: id={}", userId);
+
+        userService.changePassword(userId, request);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping
+    public ResponseEntity<PageResponse<UserDto>> getUsers(
+        @RequestParam(required = false) String cursor,
+        @RequestParam(required = false) UUID idAfter,
+        @RequestParam(defaultValue = "10") Integer limit,
+        @RequestParam(defaultValue = "email") String sortBy,
+        @RequestParam(defaultValue = "DESCENDING") String sortDirection,
+        @RequestParam(required = false) String emailLike,
+        @RequestParam(required = false) String roleEqual,
+        @RequestParam(required = false) Boolean locked
+    ) {
+        log.info("계정 목록 조회 요청 - sortBy: {}, sortDirection: {}, emailLike: {}, roleEqual: {}, locked: {}",
+            sortBy, sortDirection, emailLike, roleEqual, locked);
+
+        PageResponse<UserDto> response = userService.getUsers(
+            cursor,
+            idAfter,
+            limit,
+            sortBy,
+            sortDirection,
+            emailLike,
+            roleEqual,
+            locked
+        );
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @PatchMapping(path = "/{userId}/lock")
+    public ResponseEntity<UserDto> updateLock(
+        @PathVariable("userId") UUID userId,
+        @RequestBody UserLockUpdateRequest request
+    ) {
+        log.info("계정 잠금 상태 변경 요청: id={}", userId);
+
+        UserDto userDto = userService.updateLock(userId, request);
+
         return ResponseEntity.ok(userDto);
     }
 

@@ -8,6 +8,7 @@ import org.ikuzo.otboo.global.security.JwtAuthenticationFilter;
 import org.ikuzo.otboo.global.security.JwtLoginSuccessHandler;
 import org.ikuzo.otboo.global.security.JwtLogoutHandler;
 import org.ikuzo.otboo.global.security.LoginFailureHandler;
+import org.ikuzo.otboo.global.security.SpaCsrfTokenRequestHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -26,6 +27,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -43,7 +45,10 @@ public class SecurityConfig {
         Oauth2LoginSuccessHandler oauth2LoginSuccessHandler
     ) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+            )
             .cors(cors -> cors.disable())
             .formLogin(login -> login
                 .loginProcessingUrl("/api/auth/sign-in")
@@ -64,14 +69,16 @@ public class SecurityConfig {
                 .successHandler(oauth2LoginSuccessHandler)
             )
             .authorizeHttpRequests(auth -> auth
-//                .requestMatchers(HttpMethod.POST, "/api/auth/sign-in").permitAll()
-//                .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
-//                .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
-//                .requestMatchers(request ->
-//                        !request.getRequestURI().startsWith("/api/")
-//                ).permitAll()
-//                .anyRequest().authenticated()
-                    .anyRequest().permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/auth/csrf-token").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/sign-in").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/sign-out").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+                .requestMatchers(request ->
+                        !request.getRequestURI().startsWith("/api/")
+                ).permitAll()
+                .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(new Http403ForbiddenEntryPoint())
