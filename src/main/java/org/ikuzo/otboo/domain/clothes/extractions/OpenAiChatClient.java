@@ -4,19 +4,24 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OpenAiChatClient {
 
     private final WebClient openAiWebClient;
 
-    public Mono<String> chatJson(String model, String system, String user) {
+    public Mono<String> chatJson(String model, String system, String user, double temperature) {
+
+        log.info("[OpenAiChatClient] chatJson - model: {}, temperature: {}", model, temperature);
+
         Map<String, Object> body = Map.of(
             "model", model,
             "messages", List.of(
@@ -24,7 +29,7 @@ public class OpenAiChatClient {
                 Map.of("role", "user", "content", user)
             ),
             "response_format", Map.of("type", "json_object"),
-            "temperature", 0
+            "temperature", temperature
         );
 
         return openAiWebClient.post()
