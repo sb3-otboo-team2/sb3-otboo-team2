@@ -8,9 +8,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.user.repository.UserRepository;
 import org.ikuzo.otboo.global.exception.ErrorResponse;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider tokenProvider;
     private final UserDetailsService userDetailsService;
     private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -39,6 +43,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (StringUtils.hasText(token)) {
                 if (tokenProvider.validateAccessToken(token)) {
                     String email = tokenProvider.getEmailFromToken(token);
+
+                    User user = userRepository.findByEmail(email)
+                        .orElse(null);
+
+                    if (user == null) {
+                        log.debug("User not found: {}", email);
+                        sendErrorResponse(response,
+                            new BadCredentialsException("User not found"),
+                            HttpServletResponse.SC_UNAUTHORIZED);
+                        return;
+                    }
+
+                    if (user.getLocked()) {
+                        log.debug("Account is locked: {}", email);
+                        sendErrorResponse(response,
+                            new LockedException("계정이 잠겨있습니다. 관리자에게 문의하세요."),
+                            HttpServletResponse.SC_FORBIDDEN);
+                        return;
+                    }
 
                     UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
