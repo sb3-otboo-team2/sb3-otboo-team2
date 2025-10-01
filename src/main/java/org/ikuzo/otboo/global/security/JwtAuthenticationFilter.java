@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.global.exception.ErrorResponse;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -62,6 +63,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
             }
+        } catch (LockedException e) {
+            log.debug("Account is locked: {}", e.getMessage());
+            SecurityContextHolder.clearContext();
+            sendErrorResponse(response, e, HttpServletResponse.SC_FORBIDDEN);
+            return;
         } catch (Exception e) {
             log.debug("JWT authentication failed: {}", e.getMessage());
             SecurityContextHolder.clearContext();
