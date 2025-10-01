@@ -33,7 +33,7 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
     private final ClothesRepository clothesRepository;
 
     // 아우터 추천 기준
-    private static final double OUTER_NEED_NIGHT_COOL = 20.0; // ptNight ≤ 20 → 아우터 필요
+    private static final double OUTER_NEED_NIGHT_COOL = 21.0; // ptNight ≤ 20 → 아우터 필요
     private static final double OUTER_NEED_CURRENT_HOT = 23.0; // 현재 온도를 기반으로 아우터 판단
 
     // 과도기 온도 기준
@@ -42,8 +42,10 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
 
     // 계절 약가점
     private static final int SEASON_PREF_EXACT = 3;  // 현재 계절 정확 일치
-    private static final int SEASON_PREF_ALL = 1;    // 사계절
-    private static final int SEASON_PREF_PAIR = 2;   // 봄↔가을 교차 및 약한 인접 가점
+    private static final int SEASON_PREF_ALL = 1;  // 사계절
+    private static final int SEASON_PREF_SPRING_FALL = 2; // 봄/가을 교차
+    private static final int SEASON_PREF_SUMMER_WINTER = 0; // 여름/겨울 교차
+    private static final int SEASON_PREF_PAIR = 1;   // 계절 약한 인접 가점
 
     // 타입별 추천 최소 총점(플로어)
     private static final int FLOOR_PRIMARY = 2; // TOP/DRESS
@@ -358,12 +360,18 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
         if (item.equals(now)) {
             return SEASON_PREF_EXACT;
         }
-        boolean weakPair =
-            ("봄".equals(now) && ("가을".equals(item) || "겨울".equals(item))) ||
-                ("가을".equals(now) && ("봄".equals(item) || "여름".equals(item))) ||
-                ("여름".equals(now) && "가을".equals(item)) ||
-                ("겨울".equals(now) && "봄".equals(item));
-        return weakPair ? SEASON_PREF_PAIR : 0;
+        boolean springFallPair =
+            ("봄".equals(now) && "가을".equals(item)) || ("가을".equals(now) && "봄".equals(item));
+        if (springFallPair) {
+            return SEASON_PREF_SPRING_FALL;
+        }
+
+        boolean summerWinerPair =
+            ("여름".equals(now) && "겨울".equals(item)) || "겨울".equals(now) && "여름".equals(item);
+        if (summerWinerPair) {
+            return SEASON_PREF_SUMMER_WINTER;
+        }
+        return SEASON_PREF_PAIR;
     }
 
     /**
@@ -454,7 +462,7 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
         } else if (ptDay >= 23) {
             return switch (t) {
                 case "얇음" -> +4;
-                case "보통" -> +2;
+                case "보통" -> +0;
                 case "두꺼움" -> -20;
                 default -> -5;
             };

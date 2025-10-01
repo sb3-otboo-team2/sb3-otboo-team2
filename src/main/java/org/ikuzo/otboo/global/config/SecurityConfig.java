@@ -78,6 +78,7 @@ public class SecurityConfig {
                 .requestMatchers(request ->
                         !request.getRequestURI().startsWith("/api/")
                 ).permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/clothes/extractions").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
