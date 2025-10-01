@@ -318,7 +318,3 @@ ALTER TABLE "clothes"
             ));
 
 COMMIT;
-
-ALTER TABLE "feeds"
-    ADD CONSTRAINT "FK_FEEDS_WEATHER"
-        FOREIGN KEY ("weather_id") REFERENCES "weathers" ("id") ON DELETE CASCADE;
