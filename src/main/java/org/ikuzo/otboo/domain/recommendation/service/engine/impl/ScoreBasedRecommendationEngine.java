@@ -33,7 +33,7 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
     private final ClothesRepository clothesRepository;
 
     // 아우터 추천 기준
-    private static final double OUTER_NEED_NIGHT_COOL = 21.0; // ptNight ≤ 20 → 아우터 필요
+    private static final double OUTER_NEED_NIGHT_COOL = 21.0; // ptNight ≤ 21 → 아우터 필요
     private static final double OUTER_NEED_CURRENT_HOT = 23.0; // 현재 온도를 기반으로 아우터 판단
 
     // 과도기 온도 기준
@@ -348,7 +348,7 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
     }
 
     /**
-     * 계절 가점(정확 +3, 인접/교차 +2, 사계절 +1, 그 외 0)
+     * 계절 가점(정확 +3, 봄/가을 교차 +2, 기타 인접 +1, 여름/겨울 교차 0, 사계절 +1)
      */
     private int seasonAffinityScore(String now, String item) {
         if (item == null || item.isBlank()) {
