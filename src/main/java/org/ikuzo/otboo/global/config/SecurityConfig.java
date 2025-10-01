@@ -75,6 +75,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/sign-out").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/weathers", "/api/weathers/location").permitAll()
                 .requestMatchers(request ->
                         !request.getRequestURI().startsWith("/api/")
                 ).permitAll()
@@ -115,4 +116,3 @@ public class SecurityConfig {
         return handler;
     }
 }
-
