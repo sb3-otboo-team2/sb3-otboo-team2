@@ -55,4 +55,9 @@ public class OtbooUserDetails implements UserDetails, OAuth2User {
     public String getName() {
         return userDto.email();
     }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return !userDto.locked();
+    }
 }
