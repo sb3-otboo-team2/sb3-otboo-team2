@@ -52,6 +52,11 @@ public class WeatherCollectJobConfig {
             List<User> targets =
                 userRepository.findByLockedFalseAndLatitudeIsNotNullAndLongitudeIsNotNull();
 
+            if (targets.isEmpty()) {
+                log.warn("[WeatherCollectJobConfig] 조건을 만족하는 사용자가 없어 배치를 종료합니다.");
+                return RepeatStatus.FINISHED;
+            }
+
             int success = 0, fail = 0;
             for (User u : targets) {
                 try {
