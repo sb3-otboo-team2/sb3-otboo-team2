@@ -35,6 +35,7 @@ import org.ikuzo.otboo.domain.weather.repository.WeatherRepository;
 import org.ikuzo.otboo.domain.weather.util.KmaGridConverter;
 import org.ikuzo.otboo.domain.weather.util.KmaGridConverter.XY;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -74,7 +75,7 @@ public class WeatherServiceImpl implements WeatherService {
     }
 
     //단기예보 수집 -> Weather 저장 -> 변화 감지 후 알림
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Override
     public WeatherDto collectAndSaveForUser(UUID userId) {
         log.debug("[WeatherService] 사용자 {} 날씨 수집 시작", userId);
@@ -109,8 +110,7 @@ public class WeatherServiceImpl implements WeatherService {
         // 동일 fcstDate+fcstTime 기준 예보 묶음 만들기
         Map<String, Map<String, String>> grouped = new LinkedHashMap<>();
         for (Item it : items) {
-            // 가장 이른(fcstDate+fcstTime) 키 선택 (사전순 == 시간순)
-            String key = grouped.keySet().stream().min(String::compareTo).orElseThrow();
+            String key = it.getFcstDate() + it.getFcstTime();
             grouped.computeIfAbsent(key, k -> new HashMap<>()).put(it.getCategory(), it.getFcstValue());
         }
 
@@ -122,7 +122,7 @@ public class WeatherServiceImpl implements WeatherService {
         log.debug("[WeatherService] 사용자 {}: 기상청 예보 {}건 수신", userId, items.size());
 
         // 첫 번째(가장 이른 키) 선택
-        String firstKey = grouped.keySet().iterator().next();
+        String firstKey = grouped.keySet().stream().min(String::compareTo).orElseThrow();
         Map<String, String> cat = grouped.get(firstKey);
 
         if (!cat.containsKey("TMP") || !cat.containsKey("POP") || !cat.containsKey("SKY") || !cat.containsKey("PTY")) {
