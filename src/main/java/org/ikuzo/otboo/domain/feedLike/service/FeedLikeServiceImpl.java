@@ -1,6 +1,5 @@
 package org.ikuzo.otboo.domain.feedLike.service;
 
-import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,13 +8,15 @@ import org.ikuzo.otboo.domain.feed.exception.FeedLikeNotFoundException;
 import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
 import org.ikuzo.otboo.domain.feedLike.entity.FeedLike;
+import org.ikuzo.otboo.domain.feedLike.dto.FeedLikeEventDto;
 import org.ikuzo.otboo.domain.feedLike.repository.FeedLikeRepository;
-import org.ikuzo.otboo.domain.notification.entity.Level;
-import org.ikuzo.otboo.domain.notification.service.NotificationService;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
+import org.ikuzo.otboo.domain.user.dto.UserSummary;
 import org.ikuzo.otboo.global.security.OtbooUserDetails;
+import org.ikuzo.otboo.global.event.message.FeedLikeCreatedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,7 +30,7 @@ public class FeedLikeServiceImpl implements FeedLikeService {
     private final FeedRepository feedRepository;
     private final UserRepository userRepository;
     private final FeedLikeRepository feedLikeRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -54,9 +55,13 @@ public class FeedLikeServiceImpl implements FeedLikeService {
 
         User author = feed.getAuthor();
         if (author != null && !author.getId().equals(userId)) {
-            String title = user.getName() + " 님이 내 피드에 좋아요를 눌렀습니다.";
-            String content = feed.getContent();
-            notificationService.create(Set.of(author.getId()), title, content, Level.INFO);
+            FeedLikeEventDto eventDto = new FeedLikeEventDto(
+                feed.getId(),
+                feed.getContent(),
+                new UserSummary(author.getId(), author.getName(), author.getProfileImageUrl()),
+                new UserSummary(user.getId(), user.getName(), user.getProfileImageUrl())
+            );
+            eventPublisher.publishEvent(new FeedLikeCreatedEvent(eventDto, java.time.Instant.now()));
         }
 
         log.info("[FeedLikeService] 피드 좋아요 생성 완료 feedId={}, userId={}", feedId, userId);
