@@ -69,6 +69,12 @@ public class NotificationRequiredTopicListener {
 
             UUID receiverId = event.getDto().author().userId();
             String likerName = event.getDto().liker().name();
+            UUID likerId = event.getDto().liker().userId();
+
+            // 자기 자신의 피드에 좋아요를 누른 경우 알림을 보내지 않음
+            if (receiverId.equals(likerId)) {
+                return;
+            }
 
             String title = likerName + " 님이 내 피드에 좋아요를 눌렀습니다.";
             String content = event.getDto().feedContent();
