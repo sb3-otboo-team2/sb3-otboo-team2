@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.feedLike.service;
 
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +10,8 @@ import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
 import org.ikuzo.otboo.domain.feedLike.entity.FeedLike;
 import org.ikuzo.otboo.domain.feedLike.repository.FeedLikeRepository;
+import org.ikuzo.otboo.domain.notification.entity.Level;
+import org.ikuzo.otboo.domain.notification.service.NotificationService;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
@@ -26,6 +29,7 @@ public class FeedLikeServiceImpl implements FeedLikeService {
     private final FeedRepository feedRepository;
     private final UserRepository userRepository;
     private final FeedLikeRepository feedLikeRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -47,6 +51,13 @@ public class FeedLikeServiceImpl implements FeedLikeService {
             .build();
 
         feedLikeRepository.save(feedLike);
+
+        User author = feed.getAuthor();
+        if (author != null && !author.getId().equals(userId)) {
+            String title = user.getName() + " 님이 내 피드에 좋아요를 눌렀습니다.";
+            String content = feed.getContent();
+            notificationService.create(Set.of(author.getId()), title, content, Level.INFO);
+        }
 
         log.info("[FeedLikeService] 피드 좋아요 생성 완료 feedId={}, userId={}", feedId, userId);
     }

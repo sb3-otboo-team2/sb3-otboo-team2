@@ -3,6 +3,7 @@ package org.ikuzo.otboo.domain.comment.service;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,8 @@ import org.ikuzo.otboo.domain.comment.repository.CommentRepository;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
 import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
 import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
+import org.ikuzo.otboo.domain.notification.entity.Level;
+import org.ikuzo.otboo.domain.notification.service.NotificationService;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
@@ -34,6 +37,7 @@ public class CommentServiceImpl implements CommentService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final CommentMapper commentMapper;
+    private final NotificationService notificationService;
 
     @Transactional
     @Override
@@ -57,6 +61,12 @@ public class CommentServiceImpl implements CommentService {
         feed.increaseCommentCount();
 
         commentRepository.save(comment);
+
+        User author = feed.getAuthor();
+        if (author != null && !author.getId().equals(userId)) {
+            String title = user.getName() + " 님이 내 피드에 댓글을 남겼습니다.";
+            notificationService.create(Set.of(author.getId()), title, request.content(), Level.INFO);
+        }
 
         log.info("[CommentService] 피드 댓글 생성 완료 authorId={} feedId={}", userId, feedId);
 
