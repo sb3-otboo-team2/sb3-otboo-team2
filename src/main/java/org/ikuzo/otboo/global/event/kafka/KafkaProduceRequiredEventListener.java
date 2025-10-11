@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.global.event.message.FeedCreatedEvent;
+import org.ikuzo.otboo.global.event.message.FeedLikeCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FollowCreatedEvent;
 import org.ikuzo.otboo.global.event.message.MessageCreatedEvent;
 import org.ikuzo.otboo.global.event.message.NotificationCreatedEvent;
@@ -32,6 +34,16 @@ public class KafkaProduceRequiredEventListener {
 
     @TransactionalEventListener
     public void on(NotificationCreatedEvent event) {
+        sendToKafka(event);
+    }
+
+    @TransactionalEventListener
+    public void on(FeedLikeCreatedEvent event) {
+        sendToKafka(event);
+    }
+
+    @TransactionalEventListener
+    public void on(FeedCreatedEvent event) {
         sendToKafka(event);
     }
 

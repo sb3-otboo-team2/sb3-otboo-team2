@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.feed.service;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.clothes.entity.Clothes;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesRepository;
 import org.ikuzo.otboo.domain.feed.dto.FeedCreateRequest;
+import org.ikuzo.otboo.domain.feed.dto.FeedCreatedEventDto;
 import org.ikuzo.otboo.domain.feed.dto.FeedDto;
 import org.ikuzo.otboo.domain.feed.dto.FeedUpdateRequest;
 import org.ikuzo.otboo.domain.feed.entity.Feed;
@@ -26,13 +28,16 @@ import org.ikuzo.otboo.domain.feedLike.repository.FeedLikeRepository;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
+import org.ikuzo.otboo.domain.user.dto.UserSummary;
 import org.ikuzo.otboo.domain.weather.entity.Weather;
 import org.ikuzo.otboo.domain.weather.exception.WeatherNotFoundException;
 import org.ikuzo.otboo.domain.weather.repository.WeatherRepository;
 import org.ikuzo.otboo.global.dto.PageResponse;
+import org.ikuzo.otboo.global.event.message.FeedCreatedEvent;
 import org.ikuzo.otboo.global.security.OtbooUserDetails;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +53,7 @@ public class FeedServiceImpl implements FeedService {
     private final ClothesRepository clothesRepository;
     private final FeedMapper feedMapper;
     private final FeedLikeRepository feedLikeRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -101,6 +107,13 @@ public class FeedServiceImpl implements FeedService {
 
         feed.attachClothes(orderedClothes);
         Feed saved = feedRepository.save(feed);
+
+        FeedCreatedEventDto eventDto = new FeedCreatedEventDto(
+            saved.getId(),
+            saved.getContent(),
+            new UserSummary(author.getId(), author.getName(), author.getProfileImageUrl())
+        );
+        eventPublisher.publishEvent(new FeedCreatedEvent(eventDto, Instant.now()));
 
         log.info("[FeedService] Feed 생성 완료 authorId = {}", req.authorId());
 
