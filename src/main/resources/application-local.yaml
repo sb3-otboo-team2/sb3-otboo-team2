@@ -11,6 +11,11 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   batch:
     initialize-schema: ALWAYS   # 최초 테이블 생성용
 weather:
