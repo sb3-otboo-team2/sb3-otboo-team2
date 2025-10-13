@@ -15,4 +15,6 @@ public interface UserRepository extends JpaRepository<User, UUID>, UserCustomRep
 
     List<User> findByLockedFalseAndLatitudeIsNotNullAndLongitudeIsNotNull();
 
+    List<User> findIdsByLockedFalse();
+
 }
