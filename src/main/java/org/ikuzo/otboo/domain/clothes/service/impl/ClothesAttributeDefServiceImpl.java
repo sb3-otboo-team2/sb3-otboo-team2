@@ -21,6 +21,8 @@ import org.ikuzo.otboo.domain.clothes.exception.MissingRequiredFieldException;
 import org.ikuzo.otboo.domain.clothes.mapper.ClothesAttributeDefMapper;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothesAttributeDefService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,12 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     private final ClothesAttributeDefRepository clothesAttributeDefRepository;
     private final ClothesAttributeDefMapper mapper;
 
+    @Cacheable(
+        value = "clothesAttributeDef",
+        key = "'list_' + #sortBy + '_' + #sortDirection + '_' + " +
+            "(#keywordLike != null ? #keywordLike.trim(): 'null')",
+        unless = "#result == null || #result.isEmpty()"
+    )
     @Transactional(readOnly = true)
     @Override
     public List<ClothesAttributeDefDto> getList(
@@ -42,7 +50,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         String keywordLike
     ) {
         log.info("[Service] 속성 목록 조회 시작 - sortBy: {}, sortDirection: {}, keywordLike: {}",
-            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" : keywordLike);
+            sortBy, sortDirection, Objects.equals(normalizeKeyword(keywordLike), "") ? "공백" : keywordLike);
 
         String normalizeKeyword = normalizeKeyword(keywordLike);
 
@@ -51,13 +59,14 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         );
 
         log.info("[Service] 속성 목록 조회 완료 - sortBy: {}, sortDirection: {}, keywordLike: {}",
-            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" : keywordLike);
+            sortBy, sortDirection, Objects.equals(normalizeKeyword(keywordLike), "") ? "공백" : keywordLike);
 
         return data.stream()
             .map(mapper::toDto)
             .toList();
     }
 
+    @CacheEvict(value = "clothesAttributeDef", allEntries = true)
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
@@ -88,6 +97,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
     }
 
+    @CacheEvict(value = "clothesAttributeDef", allEntries = true)
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
@@ -116,6 +126,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         }
     }
 
+    @CacheEvict(value = "clothesAttributeDef", allEntries = true)
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
