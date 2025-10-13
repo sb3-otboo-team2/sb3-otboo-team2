@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.global.event.message.ClothesAttributeDefCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FeedCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FeedLikeCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FollowCreatedEvent;
@@ -11,6 +12,7 @@ import org.ikuzo.otboo.global.event.message.MessageCreatedEvent;
 import org.ikuzo.otboo.global.event.message.NotificationCreatedEvent;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 
@@ -44,6 +46,11 @@ public class KafkaProduceRequiredEventListener {
 
     @TransactionalEventListener
     public void on(FeedCreatedEvent event) {
+        sendToKafka(event);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void on(ClothesAttributeDefCreatedEvent event) {
         sendToKafka(event);
     }
 
