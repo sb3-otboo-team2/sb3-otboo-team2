@@ -98,7 +98,7 @@ public class WeatherReadServiceImpl implements WeatherReadService {
     @Override
     @Transactional
     @Cacheable(value = "weatherByCoordinates",
-        key = "weatherServiceImpl.buildCacheKey(#latitude, #longitude)")
+        key = "T(org.ikuzo.otboo.domain.weather.service.WeatherServiceImpl).buildCacheKey(#latitude, #longitude)")
     public List<WeatherDto> getWeatherByCoordinates(double latitude, double longitude) {
         log.debug("[WeatherReadService] 날씨 조회 시작: lat={}, lon={}", latitude, longitude);
         XY xy = KmaGridConverter.toXY(latitude, longitude);
