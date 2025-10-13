@@ -54,6 +54,10 @@ public class WeatherServiceImpl implements WeatherService {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HHmm");
 
+    public static String buildCacheKey(double latitude, double longitude) {
+        return String.format("%.4f:%.4f", latitude, longitude);
+    }
+
     // 위경도 -> 행정구역 명
     @Transactional(readOnly = true)
     @Override
