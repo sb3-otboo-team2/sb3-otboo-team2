@@ -39,6 +39,7 @@ import org.ikuzo.otboo.domain.weather.repository.WeatherRepository;
 import org.ikuzo.otboo.domain.weather.util.KmaGridConverter;
 import org.ikuzo.otboo.domain.weather.util.KmaGridConverter.XY;
 import org.ikuzo.otboo.global.security.OtbooUserDetails;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -96,6 +97,8 @@ public class WeatherReadServiceImpl implements WeatherReadService {
      */
     @Override
     @Transactional
+    @Cacheable(value = "weatherByCoordinates",
+        key = "T(org.ikuzo.otboo.domain.weather.service.WeatherServiceImpl).buildCacheKey(#latitude, #longitude)")
     public List<WeatherDto> getWeatherByCoordinates(double latitude, double longitude) {
         log.debug("[WeatherReadService] 날씨 조회 시작: lat={}, lon={}", latitude, longitude);
         XY xy = KmaGridConverter.toXY(latitude, longitude);
