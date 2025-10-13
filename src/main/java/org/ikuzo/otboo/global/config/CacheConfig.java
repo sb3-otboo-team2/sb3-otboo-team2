@@ -47,8 +47,22 @@ public class CacheConfig {
                 .recordStats()
                 .build());
 
+        CaffeineCache clothes = new CaffeineCache("clothes",
+            Caffeine.newBuilder()
+                .expireAfterAccess(600, TimeUnit.SECONDS)
+                .maximumSize(1000)
+                .recordStats()
+                .build());
+
+        CaffeineCache clothesAttributeDef = new CaffeineCache("clothesAttributeDef",
+            Caffeine.newBuilder()
+                .expireAfterAccess(3600, TimeUnit.SECONDS)
+                .maximumSize(100)
+                .recordStats()
+                .build());
+
         cacheManager.setCaches(Arrays.asList(
-            notifications, followers, followings, followSummary
+            notifications, followers, followings, followSummary, clothes, clothesAttributeDef
         ));
 
         return cacheManager;
