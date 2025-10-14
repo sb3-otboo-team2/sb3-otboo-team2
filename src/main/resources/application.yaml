@@ -1,7 +1,7 @@
 spring:
   profiles:
     active:
-      - local
+      - ${SPRING_ACTIVE_PROFILE}
   servlet:
     multipart:
       max-file-size: 10MB       # 업로드 단일 파일 최대 크기
@@ -104,6 +104,24 @@ admin:
   name: ${OTBOO_ADMIN_NAME}
   email: ${OTBOO_ADMIN_EMAIL}
   password: ${OTBOO_ADMIN_PASSWORD}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    info:
+      enabled: true
+    loggers:
+      access: unrestricted
+  info:
+    env:
+      enabled: true
 
 logging:
   level:

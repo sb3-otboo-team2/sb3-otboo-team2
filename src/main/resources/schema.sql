@@ -22,6 +22,8 @@ CREATE TABLE "users"
     "profile_image_url"       TEXT             NULL,
     "locked"                  BOOLEAN          NOT NULL,
     "role"                    VARCHAR(20)      NOT NULL,
+    "provider_id"             VARCHAR(255)     NULL,
+    "provider"                VARCHAR(255)     NULL,
     CONSTRAINT "PK_USERS" PRIMARY KEY ("id")
 );
 
