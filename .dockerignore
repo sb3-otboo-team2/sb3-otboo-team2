@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# GitHub
+.github
+
+# Gradle
+.gradle
+gradlew
+gradlew.bat
+gradle/
+
+# IDE
+.idea
+.vscode
+*.iml
+*.iws
+*.ipr
+
+# Build (이미 빌드된 jar만 COPY하므로 소스 제외)
+src/
+build/classes/
+build/generated/
+build/reports/
+build/test-results/
+build/tmp/
+
+# 문서 및 설정
+README.md
+*.md
+task-definition.json
+Dockerfile
+.dockerignore
+
+# 환경 변수
+.env
+.env.*
+env.example
+
+# 테스트
+build/test-results/
+build/reports/
+
+# 로그
+*.log
+logs/
+
