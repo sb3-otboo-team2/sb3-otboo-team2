@@ -1,32 +1,21 @@
 package org.ikuzo.otboo.global.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCache;
-import org.springframework.cache.support.CompositeCacheManager;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair;
 
 @Configuration
 @EnableCaching
 public class CacheConfig {
 
     @Bean
-    public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory,
-                                     ObjectMapper objectMapper) {
+    public CacheManager cacheManager() {
         SimpleCacheManager cacheManager = new SimpleCacheManager();
 
         CaffeineCache notifications = new CaffeineCache("notifications",
@@ -57,25 +46,21 @@ public class CacheConfig {
                 .recordStats()
                 .build());
 
-        cacheManager.setCaches(Arrays.asList(
-            notifications, followers, followings, followSummary
+        CaffeineCache weatherByCoordinates = new CaffeineCache("weatherByCoordinates",
+            Caffeine.newBuilder()
+                .expireAfterWrite(30, TimeUnit.MINUTES)
+                .maximumSize(500)
+                .recordStats()
+                .build());
+
+        cacheManager.setCaches(List.of(
+            notifications,
+            followers,
+            followings,
+            followSummary,
+            weatherByCoordinates
         ));
         cacheManager.initializeCaches();
-
-        RedisCacheConfiguration redisDefaultConfig = RedisCacheConfiguration.defaultCacheConfig()
-            .serializeValuesWith(SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer(objectMapper)))
-            .disableCachingNullValues();
-
-        Map<String, RedisCacheConfiguration> redisCaches = new HashMap<>();
-        redisCaches.put("weatherByCoordinates", redisDefaultConfig.entryTtl(Duration.ofMinutes(30)));
-
-        RedisCacheManager redisCacheManager = RedisCacheManager.builder(redisConnectionFactory)
-            .cacheDefaults(redisDefaultConfig)
-            .withInitialCacheConfigurations(redisCaches)
-            .build();
-
-        CompositeCacheManager compositeCacheManager = new CompositeCacheManager(redisCacheManager, cacheManager);
-        compositeCacheManager.setFallbackToNoOpCache(false);
-        return compositeCacheManager;
+        return cacheManager;
     }
 }
