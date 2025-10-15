@@ -112,7 +112,7 @@ public class NotificationRequiredTopicListener {
     }
 
     @KafkaListener(topics = "otboo.ClothesAttributeDefCreatedEvent")
-    @Transactional(readOnly = true)
+    @Transactional
     public void onClothesAttributeDefCreatedEvent(String kafkaEvent) {
         try {
             ClothesAttributeDefCreatedEvent event = objectMapper.readValue(kafkaEvent,
