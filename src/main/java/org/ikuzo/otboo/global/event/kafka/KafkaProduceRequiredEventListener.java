@@ -1,6 +1,5 @@
 package org.ikuzo.otboo.global.event.kafka;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +9,9 @@ import org.ikuzo.otboo.global.event.message.FeedLikeCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FollowCreatedEvent;
 import org.ikuzo.otboo.global.event.message.MessageCreatedEvent;
 import org.ikuzo.otboo.global.event.message.NotificationCreatedEvent;
+import org.ikuzo.otboo.global.exception.kafka.KafkaInfrastructureException;
+import org.ikuzo.otboo.global.exception.kafka.KafkaPublishingException;
+import org.ikuzo.otboo.global.exception.kafka.KafkaSerializationException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -55,12 +57,23 @@ public class KafkaProduceRequiredEventListener {
     }
 
     private <T> void sendToKafka(T event) {
+        final String topic = "otboo.".concat(event.getClass().getSimpleName());
         try {
             String payload = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send("otboo.".concat(event.getClass().getSimpleName()), payload);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to send event to Kafka", e);
-            throw new RuntimeException(e);
+            kafkaTemplate.send(topic, payload).get();
+
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new KafkaSerializationException(e);
+
+        } catch (java.util.concurrent.ExecutionException e) {
+            throw new KafkaPublishingException(e);
+
+        } catch (org.springframework.kafka.KafkaException e) {
+            throw new KafkaInfrastructureException(e);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new KafkaPublishingException(e);
         }
     }
 }
