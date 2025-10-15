@@ -2,15 +2,16 @@ package org.ikuzo.otboo.global.event.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.follow.repository.FollowRepository;
 import org.ikuzo.otboo.domain.notification.entity.Level;
 import org.ikuzo.otboo.domain.notification.service.NotificationService;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
-import org.ikuzo.otboo.global.base.BaseEntity;
 import org.ikuzo.otboo.global.event.message.ClothesAttributeDefCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FeedCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FeedLikeCreatedEvent;
@@ -18,6 +19,7 @@ import org.ikuzo.otboo.global.event.message.FollowCreatedEvent;
 import org.ikuzo.otboo.global.event.message.MessageCreatedEvent;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -51,8 +53,7 @@ public class NotificationRequiredTopicListener {
     @KafkaListener(topics = "otboo.MessageCreatedEvent")
     public void onMessageCreatedEvent(String kafkaEvent) {
         try {
-            MessageCreatedEvent event = objectMapper.readValue(kafkaEvent,
-                MessageCreatedEvent.class);
+            MessageCreatedEvent event = objectMapper.readValue(kafkaEvent, MessageCreatedEvent.class);
 
             UUID receiverId = event.getDto().receiver().userId();
             String senderName = event.getDto().sender().name();
@@ -70,8 +71,7 @@ public class NotificationRequiredTopicListener {
     @KafkaListener(topics = "otboo.FeedLikeCreatedEvent")
     public void onFeedLikeCreatedEvent(String kafkaEvent) {
         try {
-            FeedLikeCreatedEvent event = objectMapper.readValue(kafkaEvent,
-                FeedLikeCreatedEvent.class);
+            FeedLikeCreatedEvent event = objectMapper.readValue(kafkaEvent, FeedLikeCreatedEvent.class);
 
             UUID receiverId = event.getDto().author().userId();
             String likerName = event.getDto().liker().name();
@@ -97,8 +97,7 @@ public class NotificationRequiredTopicListener {
             FeedCreatedEvent event = objectMapper.readValue(kafkaEvent, FeedCreatedEvent.class);
 
             UUID authorId = event.getDto().author().userId();
-            Set<UUID> followerIds = Set.copyOf(
-                followRepository.findFollowerIdsByFollowingId(authorId));
+            Set<UUID> followerIds = Set.copyOf(followRepository.findFollowerIdsByFollowingId(authorId));
             if (followerIds.isEmpty()) {
                 return;
             }
@@ -113,21 +112,30 @@ public class NotificationRequiredTopicListener {
     }
 
     @KafkaListener(topics = "otboo.ClothesAttributeDefCreatedEvent")
+    @Transactional(readOnly = true)
     public void onClothesAttributeDefCreatedEvent(String kafkaEvent) {
         try {
             ClothesAttributeDefCreatedEvent event = objectMapper.readValue(kafkaEvent,
                 ClothesAttributeDefCreatedEvent.class);
 
-            Set<UUID> allUserIds = Set.copyOf(userRepository.findUserIdsByLockedFalse());
-
-            if (allUserIds.isEmpty()) {
-                return;
-            }
-
             String title = "새로운 의상 속성이 추가되었습니다";
             String content = "내 의상에 [" + event.getDto().name() + "]을 추가해보세요.";
 
-            notificationService.create(allUserIds, title, content, Level.INFO);
+            final int BATCH_SIZE = 1000;
+            try (Stream<UUID> userIdStream = userRepository.streamUserIdsByLockedFalse()) {
+                Set<UUID> batch = new HashSet<>();
+                userIdStream.forEach(userId -> {
+                    batch.add(userId);
+                    if (batch.size() >= BATCH_SIZE) {
+                        notificationService.create(Set.copyOf(batch), title, content, Level.INFO);
+                        batch.clear();
+                    }
+                });
+
+                if (!batch.isEmpty()) {
+                    notificationService.create(batch, title, content, Level.INFO);
+                }
+            }
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
