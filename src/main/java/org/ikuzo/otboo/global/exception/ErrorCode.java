@@ -52,7 +52,13 @@ public enum ErrorCode {
     NOTIFICATION_NOT_FOUND("존재하지 않는 알림 입니다."),
 
     // Server 에러
-    INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다.");
+    INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다."),
+
+    // Kafka
+    KAFKA_SERIALIZATION_ERROR("카프카 직렬화/역직렬화에 실패했습니다."),
+    KAFKA_PUBLISH_ERROR("카프카 전송에 실패했습니다."),
+    KAFKA_INFRA_ERROR("카프카 인프라 오류가 발생했습니다.");
+
 
     private final String message;
 
