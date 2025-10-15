@@ -2,19 +2,24 @@ package org.ikuzo.otboo.global.event.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.follow.repository.FollowRepository;
 import org.ikuzo.otboo.domain.notification.entity.Level;
 import org.ikuzo.otboo.domain.notification.service.NotificationService;
+import org.ikuzo.otboo.domain.user.repository.UserRepository;
+import org.ikuzo.otboo.global.event.message.ClothesAttributeDefCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FeedCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FeedLikeCreatedEvent;
 import org.ikuzo.otboo.global.event.message.FollowCreatedEvent;
 import org.ikuzo.otboo.global.event.message.MessageCreatedEvent;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -24,6 +29,7 @@ public class NotificationRequiredTopicListener {
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
     private final FollowRepository followRepository;
+    private final UserRepository userRepository;
 
     @KafkaListener(topics = "otboo.FollowCreatedEvent")
     public void onFollowCreatedEvent(String kafkaEvent) {
@@ -100,6 +106,36 @@ public class NotificationRequiredTopicListener {
             String content = event.getDto().content();
 
             notificationService.create(followerIds, title, content, Level.INFO);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @KafkaListener(topics = "otboo.ClothesAttributeDefCreatedEvent")
+    @Transactional
+    public void onClothesAttributeDefCreatedEvent(String kafkaEvent) {
+        try {
+            ClothesAttributeDefCreatedEvent event = objectMapper.readValue(kafkaEvent,
+                ClothesAttributeDefCreatedEvent.class);
+
+            String title = "새로운 의상 속성이 추가되었습니다";
+            String content = "내 의상에 [" + event.getDto().name() + "]을 추가해보세요.";
+
+            final int BATCH_SIZE = 1000;
+            try (Stream<UUID> userIdStream = userRepository.streamUserIdsByLockedFalse()) {
+                Set<UUID> batch = new HashSet<>();
+                userIdStream.forEach(userId -> {
+                    batch.add(userId);
+                    if (batch.size() >= BATCH_SIZE) {
+                        notificationService.create(Set.copyOf(batch), title, content, Level.INFO);
+                        batch.clear();
+                    }
+                });
+
+                if (!batch.isEmpty()) {
+                    notificationService.create(batch, title, content, Level.INFO);
+                }
+            }
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }

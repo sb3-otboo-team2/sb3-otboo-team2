@@ -1,5 +1,6 @@
 package org.ikuzo.otboo.domain.clothes.service.impl;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -21,6 +22,8 @@ import org.ikuzo.otboo.domain.clothes.exception.MissingRequiredFieldException;
 import org.ikuzo.otboo.domain.clothes.mapper.ClothesAttributeDefMapper;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothesAttributeDefService;
+import org.ikuzo.otboo.global.event.message.ClothesAttributeDefCreatedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -32,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefService {
 
     private final ClothesAttributeDefRepository clothesAttributeDefRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final ClothesAttributeDefMapper mapper;
 
     @Transactional(readOnly = true)
@@ -42,7 +46,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         String keywordLike
     ) {
         log.info("[Service] 속성 목록 조회 시작 - sortBy: {}, sortDirection: {}, keywordLike: {}",
-            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" : keywordLike);
+            sortBy, sortDirection, Objects.equals(normalizeKeyword(keywordLike), "") ? "공백" : keywordLike);
 
         String normalizeKeyword = normalizeKeyword(keywordLike);
 
@@ -51,7 +55,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         );
 
         log.info("[Service] 속성 목록 조회 완료 - sortBy: {}, sortDirection: {}, keywordLike: {}",
-            sortBy, sortDirection, Objects.equals(keywordLike, "") ? "공백" : keywordLike);
+            sortBy, sortDirection, Objects.equals(normalizeKeyword(keywordLike), "") ? "공백" : keywordLike);
 
         return data.stream()
             .map(mapper::toDto)
@@ -80,8 +84,14 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
         try {
             ClothesAttributeDef saved = clothesAttributeDefRepository.save(clothesAttributeDef);
+            ClothesAttributeDefDto dto = mapper.toDto(saved);
+
+            eventPublisher.publishEvent(
+                new ClothesAttributeDefCreatedEvent(dto, Instant.now())
+            );
+
             log.info("[Service] 속성 등록 완료 - id: {}, name: {}", saved.getId(), saved.getName());
-            return mapper.toDto(saved);
+            return dto;
         } catch (DataIntegrityViolationException e) {
             throw new DuplicatedAttributeNameException(name);
         }
