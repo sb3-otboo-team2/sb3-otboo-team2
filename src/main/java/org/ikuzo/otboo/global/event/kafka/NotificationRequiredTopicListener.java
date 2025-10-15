@@ -51,7 +51,8 @@ public class NotificationRequiredTopicListener {
     @KafkaListener(topics = "otboo.MessageCreatedEvent")
     public void onMessageCreatedEvent(String kafkaEvent) {
         try {
-            MessageCreatedEvent event = objectMapper.readValue(kafkaEvent, MessageCreatedEvent.class);
+            MessageCreatedEvent event = objectMapper.readValue(kafkaEvent,
+                MessageCreatedEvent.class);
 
             UUID receiverId = event.getDto().receiver().userId();
             String senderName = event.getDto().sender().name();
@@ -69,7 +70,8 @@ public class NotificationRequiredTopicListener {
     @KafkaListener(topics = "otboo.FeedLikeCreatedEvent")
     public void onFeedLikeCreatedEvent(String kafkaEvent) {
         try {
-            FeedLikeCreatedEvent event = objectMapper.readValue(kafkaEvent, FeedLikeCreatedEvent.class);
+            FeedLikeCreatedEvent event = objectMapper.readValue(kafkaEvent,
+                FeedLikeCreatedEvent.class);
 
             UUID receiverId = event.getDto().author().userId();
             String likerName = event.getDto().liker().name();
@@ -95,7 +97,8 @@ public class NotificationRequiredTopicListener {
             FeedCreatedEvent event = objectMapper.readValue(kafkaEvent, FeedCreatedEvent.class);
 
             UUID authorId = event.getDto().author().userId();
-            Set<UUID> followerIds = Set.copyOf(followRepository.findFollowerIdsByFollowingId(authorId));
+            Set<UUID> followerIds = Set.copyOf(
+                followRepository.findFollowerIdsByFollowingId(authorId));
             if (followerIds.isEmpty()) {
                 return;
             }
@@ -112,14 +115,10 @@ public class NotificationRequiredTopicListener {
     @KafkaListener(topics = "otboo.ClothesAttributeDefCreatedEvent")
     public void onClothesAttributeDefCreatedEvent(String kafkaEvent) {
         try {
-            ClothesAttributeDefCreatedEvent event = objectMapper.readValue(kafkaEvent, ClothesAttributeDefCreatedEvent.class);
+            ClothesAttributeDefCreatedEvent event = objectMapper.readValue(kafkaEvent,
+                ClothesAttributeDefCreatedEvent.class);
 
-            Set<UUID> allUserIds = Set.copyOf(
-                userRepository.findIdsByLockedFalse()
-                .stream()
-                    .map(BaseEntity::getId)
-                    .toList()
-            );
+            Set<UUID> allUserIds = Set.copyOf(userRepository.findUserIdsByLockedFalse());
 
             if (allUserIds.isEmpty()) {
                 return;
