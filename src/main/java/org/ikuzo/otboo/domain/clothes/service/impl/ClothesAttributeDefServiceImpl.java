@@ -23,8 +23,6 @@ import org.ikuzo.otboo.domain.clothes.mapper.ClothesAttributeDefMapper;
 import org.ikuzo.otboo.domain.clothes.repository.ClothesAttributeDefRepository;
 import org.ikuzo.otboo.domain.clothes.service.ClothesAttributeDefService;
 import org.ikuzo.otboo.global.event.message.ClothesAttributeDefCreatedEvent;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,12 +38,6 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     private final ApplicationEventPublisher eventPublisher;
     private final ClothesAttributeDefMapper mapper;
 
-    @Cacheable(
-        value = "clothesAttributeDef",
-        key = "'list_' + #sortBy + '_' + #sortDirection + '_' + " +
-            "(#keywordLike != null ? #keywordLike.trim(): 'null')",
-        unless = "#result == null || #result.isEmpty()"
-    )
     @Transactional(readOnly = true)
     @Override
     public List<ClothesAttributeDefDto> getList(
@@ -70,7 +62,6 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
             .toList();
     }
 
-    @CacheEvict(value = "clothesAttributeDef", allEntries = true)
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
@@ -107,7 +98,6 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
     }
 
-    @CacheEvict(value = "clothesAttributeDef", allEntries = true)
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
@@ -136,7 +126,6 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         }
     }
 
-    @CacheEvict(value = "clothesAttributeDef", allEntries = true)
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @Override
