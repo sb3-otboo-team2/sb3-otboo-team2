@@ -39,3 +39,5 @@ out/
 .vscode/
 
 .env
+
+src/main/java/org/ikuzo/otboo/global/seeder/**
