@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -23,7 +24,18 @@ import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 
 @Builder
 @Entity
-@Table(name = "clothes")
+@Table(
+    name = "clothes",
+    indexes = {
+        @Index(
+            name = "idx_clothes_owner_created_desc",
+            columnList = "owner_id, created_at DESC"
+        ),
+        @Index(
+            name = "idx_clothes_owner_type_created_id_desc",
+            columnList = "owner_id, type, created_at DESC, id DESC"
+        )
+    })
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
