@@ -1,5 +1,10 @@
 server:
   port: 8000
+  forward-headers-strategy: framework
+  tomcat:
+    remoteip:
+      protocol-header: X-Forwarded-Proto
+      remote-ip-header: X-Forwarded-For
 
 spring:
   datasource:
@@ -10,6 +15,30 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+  data:
+    redis:
+      timeout: 2000ms
+      connect-timeout: 2000ms
+
+# Actuator 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+    redis:
+      enabled: false  # Redis 헬스체크 비활성화
 
 logging:
   level:
