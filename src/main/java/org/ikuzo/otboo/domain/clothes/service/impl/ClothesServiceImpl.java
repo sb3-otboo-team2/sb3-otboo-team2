@@ -2,6 +2,7 @@ package org.ikuzo.otboo.domain.clothes.service.impl;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -203,14 +204,37 @@ public class ClothesServiceImpl implements ClothesService {
     }
 
     private void replaceAttribute(Clothes clothes, List<ClothesAttributeDto> dtos) {
-
-        clothes.getAttributes().clear();
+        if (dtos == null) {
+            return;
+        }
 
         for (ClothesAttributeDto dto : dtos) {
             if (dto == null) {
                 continue;
             }
-            clothes.getAttributes().add(toClothesAttribute(clothes, dto));
+
+            UUID defId = dto.definitionId();
+            if (defId == null) {
+                throw new MissingRequiredFieldException("definitionId is null");
+            }
+            String newValue = dto.value() == null ? null : dto.value().trim();
+
+            Optional<ClothesAttribute> existingAttr = clothes.getAttributes().stream()
+                .filter(attr -> attr.getDefinition().getId().equals(defId))
+                .findFirst();
+
+            if (existingAttr.isPresent()) {
+                ClothesAttribute existing = existingAttr.get();
+                List<String> selectable = getSelectableValues(existing.getDefinition());
+                if (!selectable.isEmpty() && !selectable.contains(newValue)) {
+                    throw new InvalidAttributeOptionException(
+                        "해당 속성에서 선택 불가한 옵션 값 입니다. definition=" + existing.getDefinition().getName()
+                            + ", 입력값=" + newValue + ", 허용=" + selectable);
+                }
+                existing.updateOptionValue(newValue);
+            } else {
+                clothes.getAttributes().add(toClothesAttribute(clothes, dto));
+            }
         }
     }
 
