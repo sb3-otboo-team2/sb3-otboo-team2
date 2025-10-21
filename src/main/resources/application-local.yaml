@@ -18,9 +18,29 @@ spring:
       password: ${REDIS_PASSWORD:}
   batch:
     initialize-schema: ALWAYS   # 최초 테이블 생성용
+
+# Actuator 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
 weather:
   batch:
     cron: "0 0/30 * * * *"
+
 logging:
   level:
     # Spring Cache 관련 디버그 로그 활성화 (캐시 Hit/Miss 추적)

@@ -32,15 +32,15 @@ public class SseService {
         SseEmitter sseEmitter = new SseEmitter(timeout);
 
         sseEmitter.onCompletion(() -> {
-            log.debug("sse on onCompletion");
+            log.info("SSE 연결 정상 종료 - receiverId: {}", receiverId);
             sseEmitterRepository.delete(receiverId, sseEmitter);
         });
         sseEmitter.onTimeout(() -> {
-            log.debug("sse on onTimeout");
+            log.info("SSE 연결 타임아웃 - receiverId: {}", receiverId);
             sseEmitterRepository.delete(receiverId, sseEmitter);
         });
         sseEmitter.onError((ex) -> {
-            log.debug("sse on onError");
+            log.info("SSE 연결 에러 발생 - receiverId: {}, 에러: {}", receiverId, ex.getMessage());
             sseEmitterRepository.delete(receiverId, sseEmitter);
         });
 
@@ -54,7 +54,8 @@ public class SseService {
                             try {
                                 sseEmitter.send(sseMessage.toEvent());
                             } catch (IOException e) {
-                                log.error(e.getMessage(), e);
+                                log.warn("SSE 재연결 시 이전 메시지 전송 실패 - receiverId: {}, 에러: {}", 
+                                    receiverId, e.getMessage());
                             }
                         });
                 },
@@ -67,16 +68,42 @@ public class SseService {
     }
 
     public void send(Collection<UUID> receiverIds, String eventName, Object data) {
+        log.info("SSE 메시지 전송 시작 - receiverIds: {}, eventName: {}", receiverIds, eventName);
+        
         SseMessage message = sseMessageRepository.save(SseMessage.create(receiverIds, eventName, data));
+        log.debug("SSE 메시지 저장 완료 - eventId: {}", message.getEventId());
+        
         Set<ResponseBodyEmitter.DataWithMediaType> event = message.toEvent();
-        sseEmitterRepository.findAllByReceiverIdsIn(receiverIds)
-            .forEach(sseEmitter -> {
+        Collection<SseEmitter> emitters = sseEmitterRepository.findAllByReceiverIdsIn(receiverIds);
+        
+        log.info("SSE Emitter 조회 완료 - receiverIds: {}, emitter 개수: {}", receiverIds, emitters.size());
+        
+        if (emitters.isEmpty()) {
+            log.warn("SSE Emitter가 없습니다 - receiverIds: {}", receiverIds);
+        }
+        
+        int successCount = 0;
+        int failCount = 0;
+        
+        for (SseEmitter sseEmitter : emitters) {
+            try {
+                sseEmitter.send(event);
+                successCount++;
+                log.debug("SSE 메시지 전송 성공 - eventId: {}", message.getEventId());
+            } catch (IOException e) {
+                failCount++;
+                // Broken pipe 등 연결이 끊긴 Emitter는 제거
+                log.warn("SSE 연결이 끊긴 Emitter 발견 - eventId: {}, 에러: {}", 
+                    message.getEventId(), e.getMessage());
                 try {
-                    sseEmitter.send(event);
-                } catch (IOException e) {
-                    log.error(e.getMessage(), e);
+                    sseEmitter.completeWithError(e);
+                } catch (Exception ex) {
+                    log.debug("Emitter completeWithError 실패 (이미 종료됨): {}", ex.getMessage());
                 }
-            });
+            }
+        }
+        
+        log.info("SSE 메시지 전송 완료 - receiverIds: {}, 성공: {}, 실패: {}", receiverIds, successCount, failCount);
     }
 
     public void broadcast(String eventName, Object data) {
@@ -87,7 +114,12 @@ public class SseService {
                 try {
                     sseEmitter.send(event);
                 } catch (IOException e) {
-                    log.error(e.getMessage(), e);
+                    log.warn("SSE 브로드캐스트 전송 실패 - 연결 끊김: {}", e.getMessage());
+                    try {
+                        sseEmitter.completeWithError(e);
+                    } catch (Exception ex) {
+                        log.debug("Emitter completeWithError 실패 (이미 종료됨): {}", ex.getMessage());
+                    }
                 }
             });
     }

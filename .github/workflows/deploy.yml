@@ -1,18 +1,25 @@
 name: Deploy to AWS ECS(CD)
+
 on:
   push:
     branches: [ main ]
 
 env:
   AWS_REGION: ap-northeast-2
-  ECR_REPOSITORY_URI: public.ecr.aws/j5n8s8m1/ikuzo
-  ECR_REPOSITORY: ikuzo
-  ECS_SERVICE: ikuzo-service
+
+  # Public ECR (us-east-1 고정)
+  ECR_PUBLIC_REGION: us-east-1
+  ECR_APP_REPO_URI: public.ecr.aws/j5n8s8m1/ikuzo
+  ECR_NGINX_REPO_URI: public.ecr.aws/j5n8s8m1/ikuzo-nginx
+
+  # ECS
   ECS_CLUSTER: ikuzo
+  ECS_APP_SERVICE: ikuzo-app-service
+  ECS_NGINX_SERVICE: ikuzo-nginx-service
 
 jobs:
   docker:
-    name: Build and Push Docker Image
+    name: Build and Push Docker Images (app + nginx)
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +32,7 @@ jobs:
           java-version: '17'
           distribution: 'corretto'
 
-      - name: Cache Gradle packages
+      - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
@@ -40,24 +47,35 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_S3_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_S3_SECRET_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ env.ECR_PUBLIC_REGION }}
 
-      - name: Login to Amazon ECR
+      - name: Login to Amazon ECR Public
         run: |
-          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+          aws ecr-public get-login-password --region $ECR_PUBLIC_REGION \
+            | docker login --username AWS --password-stdin public.ecr.aws
 
-      - name: Build with Gradle
+      - name: Build Spring Boot jar
         run: |
           chmod +x ./gradlew
           ./gradlew clean bootJar
 
-      - name: Build, tag, and push Docker image
+      - name: Build, tag and push APP image
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REPOSITORY_URI:latest -t $ECR_REPOSITORY_URI:$IMAGE_TAG .
-          docker push $ECR_REPOSITORY_URI:latest
-          docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
+          docker build -t $ECR_APP_REPO_URI:latest -t $ECR_APP_REPO_URI:$IMAGE_TAG .
+          docker push $ECR_APP_REPO_URI:latest
+          docker push $ECR_APP_REPO_URI:$IMAGE_TAG
+
+      # nginx Dockerfile 위치가 repo 루트/nginx/ 라고 가정. 경로 다르면 수정
+      - name: Build, tag and push NGINX image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f nginx/Dockerfile -t $ECR_NGINX_REPO_URI:latest -t $ECR_NGINX_REPO_URI:$IMAGE_TAG nginx
+          docker push $ECR_NGINX_REPO_URI:latest
+          docker push $ECR_NGINX_REPO_URI:$IMAGE_TAG
+
   deploy:
     name: Deploy to ECS
     needs: docker
@@ -74,25 +92,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_S3_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Load task definition from repo
-        run: cp task-definition.json new-task-def.json
-
-      - name: Update image in task definition
+      # 태스크 정의 파일들을 로컬에서 읽어서, 각각의 image를 sha 태그로 치환
+      - name: Prepare final task definitions (set app and nginx images)
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          IMAGE_URI=$ECR_REPOSITORY_URI:$IMAGE_TAG
-          cat new-task-def.json | jq --arg img_uri "$IMAGE_URI" \
-            '(.containerDefinitions[0].image) = $img_uri' > final-task-def.json
+          APP_IMG="$ECR_APP_REPO_URI:$IMAGE_TAG"
+          NGINX_IMG="$ECR_NGINX_REPO_URI:$IMAGE_TAG"
 
-      # AWS에 등록 가능한 최소 필드만 남겨 새 task 정의 생성
-      - name: Prepare final task definition
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          IMAGE_URI=$ECR_REPOSITORY_URI:$IMAGE_TAG
-
-          jq --arg img_uri "$IMAGE_URI" '
+          # App task definition 업데이트
+          jq --arg app "$APP_IMG" '
             del(
               .taskDefinitionArn,
               .revision,
@@ -101,86 +110,127 @@ jobs:
               .compatibilities,
               .registeredAt,
               .registeredBy
-            ) |
-            .containerDefinitions[0].image = $img_uri
-          ' task-definition.json > final-task-def.json
+            )
+            | .containerDefinitions[0].image = $app
+          ' task-definition-app.json > final-app-task-def.json
 
-      # 새 task 정의 등록 및 ARN 추출
-      - name: Register new task definition
-        id: register-task
+          # Nginx task definition 업데이트
+          jq --arg ngx "$NGINX_IMG" '
+            del(
+              .taskDefinitionArn,
+              .revision,
+              .status,
+              .requiresAttributes,
+              .compatibilities,
+              .registeredAt,
+              .registeredBy
+            )
+            | .containerDefinitions[0].image = $ngx
+          ' task-definition-nginx.json > final-nginx-task-def.json
+
+      - name: Register new task definitions
+        id: register-tasks
         run: |
-          arn=$(aws ecs register-task-definition \
-            --cli-input-json file://final-task-def.json \
+          # App task definition 등록
+          APP_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://final-app-task-def.json \
             --query "taskDefinition.taskDefinitionArn" --output text)
-          echo "task_def_arn=$arn" >> $GITHUB_OUTPUT
+          echo "app_task_def_arn=$APP_ARN" >> $GITHUB_OUTPUT
+          
+          # Nginx task definition 등록
+          NGINX_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://final-nginx-task-def.json \
+            --query "taskDefinition.taskDefinitionArn" --output text)
+          echo "nginx_task_def_arn=$NGINX_ARN" >> $GITHUB_OUTPUT
 
-      # 무중단 배포가 아니므로 서비스 일시 중단 후 재시작
-      - name: Stop existing ECS service temporarily
+      - name: Stop existing ECS services temporarily
         run: |
+          # App 서비스 중지
           aws ecs update-service \
             --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
-            --desired-count 0
+            --service $ECS_APP_SERVICE \
+            --desired-count 0 || echo "App service not found or already stopped"
+          
+          # Nginx 서비스 중지
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_NGINX_SERVICE \
+            --desired-count 0 || echo "Nginx service not found or already stopped"
+          
+          # 서비스들이 안정화될 때까지 대기
           aws ecs wait services-stable \
             --cluster $ECS_CLUSTER \
-            --services $ECS_SERVICE
+            --services $ECS_APP_SERVICE $ECS_NGINX_SERVICE || echo "Services already stable"
 
-      - name: Deploy new task definition to ECS service
+      - name: Deploy new task definitions to ECS services
         run: |
+          # App 서비스 배포 (2개 인스턴스)
           aws ecs update-service \
             --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
-            --task-definition ${{ steps.register-task.outputs.task_def_arn }} \
+            --service $ECS_APP_SERVICE \
+            --task-definition ${{ steps.register-tasks.outputs.app_task_def_arn }} \
+            --desired-count 2
+          
+          # Nginx 서비스 배포 (1개 인스턴스)
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_NGINX_SERVICE \
+            --task-definition ${{ steps.register-tasks.outputs.nginx_task_def_arn }} \
             --desired-count 1
+          
+          # 서비스들이 안정화될 때까지 대기
           aws ecs wait services-stable \
             --cluster $ECS_CLUSTER \
-            --services $ECS_SERVICE
+            --services $ECS_APP_SERVICE $ECS_NGINX_SERVICE
 
-      # 배포 완료 알림
-      - name: Deployment success notification
+      - name: Deployment success
         if: success()
         run: |
-          echo "::notice::✅ Deployment to ECS completed successfully!"
-          echo "Task Definition: ${{ steps.register-task.outputs.task_def_arn }}"
-          echo "Image: $ECR_REPOSITORY_URI:${{ github.sha }}"
+          echo "::notice::✅ Deployed!"
+          echo "App Task Definition: ${{ steps.register-tasks.outputs.app_task_def_arn }}"
+          echo "Nginx Task Definition: ${{ steps.register-tasks.outputs.nginx_task_def_arn }}"
+          echo "App Service: $ECS_APP_SERVICE (2 instances)"
+          echo "Nginx Service: $ECS_NGINX_SERVICE (1 instance)"
 
-      - name: Deployment failure notification
+      - name: Deployment failed
         if: failure()
         run: |
-          echo "::error::❌ Deployment to ECS failed!"
-          echo "Please check the logs and consider rolling back."
+          echo "::error::❌ Deployment failed. Check ECS events & CloudWatch logs."
+          echo "Check services: $ECS_APP_SERVICE, $ECS_NGINX_SERVICE"
 
-      # 퍼블릭 ECR에서 latest 외에 모든 태그 삭제 (청소용)
+      # latest 외 태그 정리
       - name: Clean up old ECR Public images (keep only 'latest')
         if: success()
         env:
-          ECR_REPOSITORY_URI: ${{ env.ECR_REPOSITORY_URI }}
+          REPO_APP: ${{ env.ECR_APP_REPO_URI }}
+          REPO_NGX: ${{ env.ECR_NGINX_REPO_URI }}
+          REGION: ${{ env.ECR_PUBLIC_REGION }}
         run: |
-          REPO_NAME=$(echo $ECR_REPOSITORY_URI | awk -F'/' '{print $NF}')
-          ECR_PUBLIC_REGION="us-east-1"
+          clean_repo () {
+            local REPO=$1
+            local REGION=$2
+            local REPO_NAME=$(echo $REPO | awk -F'/' '{print $NF}')
 
-          LATEST_IMAGE_DIGEST=$(aws ecr-public describe-images \
-            --region $ECR_PUBLIC_REGION \
-            --repository-name $REPO_NAME \
-            --query 'imageDetails[?imageTags != null && contains(imageTags, `latest`)].[imageDigest]' \
-            --output text | head -n 1)
-
-          if [ -z "$LATEST_IMAGE_DIGEST" ]; then
-            exit 0
-          fi
-
-          ALL_IMAGE_DETAILS=$(aws ecr-public describe-images \
-            --region $ECR_PUBLIC_REGION \
-            --repository-name $REPO_NAME \
-            --query 'imageDetails[*].[imageDigest,imageTags[]]' \
-            --output json)
-
-          IMAGES_TO_DELETE=$(echo "$ALL_IMAGE_DETAILS" | jq -r --arg LATEST_DIGEST "$LATEST_IMAGE_DIGEST" \
-            '[.[] | select(.[0] != $LATEST_DIGEST) | .[0]] | unique | .[]')
-
-          if [ -n "$IMAGES_TO_DELETE" ]; then
-            echo "$IMAGES_TO_DELETE" | xargs -I {} aws ecr-public batch-delete-image \
-              --region $ECR_PUBLIC_REGION \
+            LATEST_DIGEST=$(aws ecr-public describe-images --region $REGION \
               --repository-name $REPO_NAME \
-              --image-ids imageDigest={}
-          fi
+              --query 'imageDetails[?imageTags != null && contains(imageTags, `latest`)].[imageDigest]' \
+              --output text | head -n 1)
+
+            [ -z "$LATEST_DIGEST" ] && return 0
+
+            ALL=$(aws ecr-public describe-images --region $REGION \
+              --repository-name $REPO_NAME \
+              --query 'imageDetails[*].[imageDigest,imageTags[]]' --output json)
+
+            TO_DELETE=$(echo "$ALL" | jq -r --arg L "$LATEST_DIGEST" \
+              '[.[] | select(.[0] != $L) | .[0]] | unique | .[]')
+
+            if [ -n "$TO_DELETE" ]; then
+              echo "$TO_DELETE" | xargs -I {} aws ecr-public batch-delete-image \
+                --region $REGION --repository-name $REPO_NAME \
+                --image-ids imageDigest={}
+            fi
+          }
+
+          clean_repo "$REPO_APP" "$REGION"
+          clean_repo "$REPO_NGX" "$REGION"

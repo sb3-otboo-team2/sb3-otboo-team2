@@ -69,6 +69,10 @@ public class SecurityConfig {
                 .successHandler(oauth2LoginSuccessHandler)
             )
             .authorizeHttpRequests(auth -> auth
+                // Actuator 헬스체크 (최우선)
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
+                // Auth 엔드포인트
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf-token").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/sign-in").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
@@ -76,10 +80,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/weathers", "/api/weathers/location").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/clothes/extractions").permitAll()
+                // 정적 리소스 (API가 아닌 모든 것)
                 .requestMatchers(request ->
                         !request.getRequestURI().startsWith("/api/")
                 ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/clothes/extractions").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex

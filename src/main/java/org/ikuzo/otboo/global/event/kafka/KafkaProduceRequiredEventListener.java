@@ -59,19 +59,28 @@ public class KafkaProduceRequiredEventListener {
     private <T> void sendToKafka(T event) {
         final String topic = "otboo.".concat(event.getClass().getSimpleName());
         try {
+            log.info("Kafka 메시지 발행 시작 - topic: {}, eventType: {}", topic, event.getClass().getSimpleName());
             String payload = objectMapper.writeValueAsString(event);
+            log.debug("Kafka 메시지 페이로드: {}", payload);
+            
             kafkaTemplate.send(topic, payload).get();
+            
+            log.info("Kafka 메시지 발행 완료 - topic: {}", topic);
 
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.error("Kafka 메시지 직렬화 실패 - topic: {}, event: {}", topic, event, e);
             throw new KafkaSerializationException(e);
 
         } catch (java.util.concurrent.ExecutionException e) {
+            log.error("Kafka 메시지 발행 실패 (ExecutionException) - topic: {}", topic, e);
             throw new KafkaPublishingException(e);
 
         } catch (org.springframework.kafka.KafkaException e) {
+            log.error("Kafka 인프라 오류 - topic: {}", topic, e);
             throw new KafkaInfrastructureException(e);
 
         } catch (InterruptedException e) {
+            log.error("Kafka 메시지 발행 중단 (InterruptedException) - topic: {}", topic, e);
             Thread.currentThread().interrupt();
             throw new KafkaPublishingException(e);
         }

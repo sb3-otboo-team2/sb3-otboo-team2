@@ -5,14 +5,13 @@ FROM amazoncorretto:17-alpine3.21-jdk
 
 WORKDIR /app
 
-# curl 설치 (헬스체크용)
+# curl (헬스체크용)
 RUN apk add --no-cache curl
 
-# GitHub Actions에서 빌드된 jar 파일 복사
+# GitHub Actions에서 빌드된 jar 복사
 COPY build/libs/*.jar app.jar
 
-# JVM 옵션 설정
-ENV JVM_OPTS="-Xms256m -Xmx410m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=50 -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 
 EXPOSE 8000
 
@@ -20,4 +19,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
   CMD curl -f http://localhost:8000/actuator/health || exit 1
 
-ENTRYPOINT ["sh", "-c", "java $JVM_OPTS -Dspring.profiles.active=prod -jar app.jar"]
+# 실행
+# (프로필을 하드코딩하지 않고 ECS env로 넘길 거면 -Dspring.profiles.active=prod 제거)
+ENTRYPOINT ["java", "-Dspring.profiles.active=prod", "-jar", "app.jar"]

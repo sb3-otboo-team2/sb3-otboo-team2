@@ -39,6 +39,7 @@ public class AuthController {
         response.addCookie(refreshCookie);
 
         JwtDto body = new JwtDto(
+                
             refreshResult.userDto(),
             refreshResult.accessToken()
         );

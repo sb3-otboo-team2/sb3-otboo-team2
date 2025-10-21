@@ -45,14 +45,25 @@ spring:
         org.apache.kafka.common.security.plain.PlainLoginModule required
         username="${KAFKA_API_KEY}"
         password="${KAFKA_API_SECRET}";
+      session.timeout.ms: 30000
+      heartbeat.interval.ms: 10000
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
     consumer:
       group-id: otboo-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: true
+      auto-commit-interval: 5000
+      max-poll-records: 500
+      properties:
+        partition.assignment.strategy: org.apache.kafka.clients.consumer.RangeAssignor
+    listener:
+      ack-mode: batch
   mail:
     host: smtp.gmail.com
     port: 587
@@ -131,3 +142,7 @@ management:
 logging:
   level:
     root: info
+    org.ikuzo.otboo.global.event.kafka: info
+    org.springframework.kafka: info
+    org.springframework.kafka.listener: info
+    org.apache.kafka: warn

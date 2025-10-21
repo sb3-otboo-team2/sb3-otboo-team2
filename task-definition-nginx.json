@@ -1,0 +1,65 @@
+{
+  "family": "ikuzo-nginx-task",
+  "networkMode": "bridge",
+  "requiresCompatibilities": ["EC2"],
+  "cpu": "128",
+  "memory": "128",
+  "executionRoleArn": "arn:aws:iam::867930415693:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "nginx",
+      "image": "public.ecr.aws/j5n8s8m1/ikuzo-nginx:latest",
+      "cpu": 128,
+      "memory": 128,
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 80,
+          "protocol": "tcp"
+        },
+        {
+          "containerPort": 443,
+          "hostPort": 443,
+          "protocol": "tcp"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "nginx -t || exit 1"],
+        "interval": 30,
+        "retries": 3,
+        "startPeriod": 30,
+        "timeout": 10
+      },
+      "environment": [
+        { "name": "DOMAIN", "value": "3.38.166.191.sslip.io" },
+        { "name": "EMAIL",  "value": "hokang1870@gmail.com" },
+        { "name": "CERTBOT_STAGING", "value": "true" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ikuzo-nginx-task",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "nginx",
+          "awslogs-create-group": "true"
+        }
+      },
+      "mountPoints": [
+        {
+          "sourceVolume": "docker_sock",
+          "containerPath": "/var/run/docker.sock",
+          "readOnly": true
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "docker_sock",
+      "host": {
+        "sourcePath": "/var/run/docker.sock"
+      }
+    }
+  ]
+}
