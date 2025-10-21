@@ -1,0 +1,91 @@
+# 443 서버 (http2는 분리 지시문 사용)
+server {
+    listen 443 ssl;
+    http2 on;
+
+    server_name ${DOMAIN};
+
+    # IP 주소로 HTTPS 접속 시에도 sslip.io 도메인으로 리디렉션
+    if ($host ~* ^(\d+\.\d+\.\d+\.\d+)$) {
+        return 301 https://$1.sslip.io$request_uri;
+    }
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+
+    # 헬스체크 (최우선 순위)
+    location = /actuator/health {
+        proxy_pass http://backend/actuator/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 5s;
+    }
+
+    # API 요청
+    location /api {
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+        
+        # 필수 헤더 전달
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Content-Type 헤더 전달 (중요!)
+        proxy_set_header Content-Type $content_type;
+        proxy_set_header Content-Length $content_length;
+        
+        # Body 전달 설정
+        proxy_pass_request_body on;
+        proxy_pass_request_headers on;
+        
+        # 버퍼 설정 (대용량 요청 처리)
+        client_max_body_size 10M;
+        proxy_buffering off;
+    }
+
+    # 정적 파일 및 기타 요청
+    location / {
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api/sse {
+        proxy_pass http://backend/api/sse;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header X-Accel-Buffering no;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+
+    location /ws/ {
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_pass http://backend;
+    }
+}
+
+# 80 → 443 리다이렉트 + ACME 챌린지 유지
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}

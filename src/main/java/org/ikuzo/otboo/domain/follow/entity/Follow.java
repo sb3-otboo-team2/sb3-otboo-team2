@@ -1,0 +1,24 @@
+package org.ikuzo.otboo.domain.follow.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.global.base.BaseEntity;
+
+@Entity
+@Table(name = "follows")
+@Getter
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Follow extends BaseEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "follower_id", nullable = false)
+    private User follower;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "following_id", nullable = false)
+    private User following;
+
+}

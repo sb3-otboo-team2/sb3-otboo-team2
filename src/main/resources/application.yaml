@@ -1,14 +1,148 @@
-server:
-  port: 8080
-
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/discodeit
-    username: discodeit_user
-    password: discodeit1234
-    driver-class-name: org.postgresql.Driver
-    hikari:
-      connection-init-sql: SET SESSION hibernate.jdbc.lob.non_contextual_creation=true
-  jpa:
-    hibernate:
-      ddl-auto: update
+  profiles:
+    active:
+      - ${SPRING_ACTIVE_PROFILE}
+  servlet:
+    multipart:
+      max-file-size: 10MB       # 업로드 단일 파일 최대 크기
+      max-request-size: 20MB    # 요청 전체(여러 파일 포함) 최대 크기
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${CLIENT_ID}
+            client-secret: ${CLIENT_SECRET}
+            scope:
+              - profile_nickname
+              - profile_image
+              - account_email
+            redirect-uri: "{baseUrl}/oauth2/callback/kakao"
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/oauth2/callback/google"
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    properties:
+      security.protocol: SASL_SSL
+      sasl.mechanism: PLAIN
+      sasl.jaas.config: >
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="${KAFKA_API_KEY}"
+        password="${KAFKA_API_SECRET}";
+      session.timeout.ms: 30000
+      heartbeat.interval.ms: 10000
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: otboo-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: true
+      auto-commit-interval: 5000
+      max-poll-records: 500
+      properties:
+        partition.assignment.strategy: org.apache.kafka.clients.consumer.RangeAssignor
+    listener:
+      ack-mode: batch
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  batch:
+    initialize-schema: ALWAYS
+otboo:
+  jwt:
+    access-token:
+      secret: ${JWT_ACCESS_SECRET}
+      expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000} # 60 minutes
+    refresh-token:
+      secret: ${JWT_REFRESH_SECRET}
+      expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000} # 7 days
+
+sse:
+  timeout: 300_000
+  event-queue-capacity: 100
+
+external:
+  kma:
+    base-url: "https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0"
+    service-key: "${KMA_SERVICE_KEY_ENC}"
+    timeout-ms: 5000
+  kakao:
+    base-url: "https://dapi.kakao.com"
+    rest-api-key: "${API_KAKAO_KEY}"
+
+weather:
+  batch:
+    enabled: true
+    cron: "0 0/30 * * * *"
+
+openai:
+  base-url: https://api.openai.com/v1
+  model: gpt-4o-mini
+  api-key: ${OPENAI_API_KEY}
+  timeout-ms: 8000
+
+admin:
+  name: ${OTBOO_ADMIN_NAME}
+  email: ${OTBOO_ADMIN_EMAIL}
+  password: ${OTBOO_ADMIN_PASSWORD}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    info:
+      enabled: true
+    loggers:
+      access: unrestricted
+  info:
+    env:
+      enabled: true
+
+logging:
+  level:
+    root: info
+    org.ikuzo.otboo.global.event.kafka: info
+    org.springframework.kafka: info
+    org.springframework.kafka.listener: info
+    org.apache.kafka: warn

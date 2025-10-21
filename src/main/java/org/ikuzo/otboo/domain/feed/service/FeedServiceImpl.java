@@ -1,0 +1,259 @@
+package org.ikuzo.otboo.domain.feed.service;
+
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.ikuzo.otboo.domain.clothes.entity.Clothes;
+import org.ikuzo.otboo.domain.clothes.repository.ClothesRepository;
+import org.ikuzo.otboo.domain.feed.dto.FeedCreateRequest;
+import org.ikuzo.otboo.domain.feed.dto.FeedCreatedEventDto;
+import org.ikuzo.otboo.domain.feed.dto.FeedDto;
+import org.ikuzo.otboo.domain.feed.dto.FeedUpdateRequest;
+import org.ikuzo.otboo.domain.feed.entity.Feed;
+import org.ikuzo.otboo.domain.feed.exception.FeedAuthorUnmatchException;
+import org.ikuzo.otboo.domain.feed.exception.FeedClothesNotFoundException;
+import org.ikuzo.otboo.domain.feed.exception.FeedClothesUnmatchOwner;
+import org.ikuzo.otboo.domain.feed.exception.FeedNotFoundException;
+import org.ikuzo.otboo.domain.feed.mapper.FeedMapper;
+import org.ikuzo.otboo.domain.feed.repository.FeedRepository;
+import org.ikuzo.otboo.domain.feed.repository.dto.FeedSortKey;
+import org.ikuzo.otboo.domain.feedLike.repository.FeedLikeRepository;
+import org.ikuzo.otboo.domain.user.entity.User;
+import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
+import org.ikuzo.otboo.domain.user.repository.UserRepository;
+import org.ikuzo.otboo.domain.user.dto.UserSummary;
+import org.ikuzo.otboo.domain.weather.entity.Weather;
+import org.ikuzo.otboo.domain.weather.exception.WeatherNotFoundException;
+import org.ikuzo.otboo.domain.weather.repository.WeatherRepository;
+import org.ikuzo.otboo.global.dto.PageResponse;
+import org.ikuzo.otboo.global.event.message.FeedCreatedEvent;
+import org.ikuzo.otboo.global.security.OtbooUserDetails;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class FeedServiceImpl implements FeedService {
+
+    private final FeedRepository feedRepository;
+    private final UserRepository userRepository;
+    private final WeatherRepository weatherRepository;
+    private final ClothesRepository clothesRepository;
+    private final FeedMapper feedMapper;
+    private final FeedLikeRepository feedLikeRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Override
+    @Transactional
+    public FeedDto createFeed(FeedCreateRequest req) {
+
+        log.info("[FeedService] Feed 생성 시작 authorId = {}", req.authorId());
+        User author = userRepository.findById(req.authorId())
+            .orElseThrow(UserNotFoundException::new);
+        Weather weather = weatherRepository.findById(req.weatherId())
+            .orElseThrow(WeatherNotFoundException::new);
+
+        // 의상 ID 중복 제거 후 입력 순서 유지하며 조회 + 검증
+        Set<UUID> uniqueIds = new LinkedHashSet<>(req.clothesIds());
+        List<Clothes> clothesList = clothesRepository.findAllById(uniqueIds);
+
+        Map<UUID, Clothes> clothesById = clothesList.stream()
+            .collect(Collectors.toMap(
+                Clothes::getId,
+                c -> c,
+                (left, right) -> left,
+                LinkedHashMap::new));
+
+        if (clothesById.size() != uniqueIds.size()) {
+            Set<UUID> missing = new LinkedHashSet<>(uniqueIds);
+            missing.removeAll(clothesById.keySet());
+            throw FeedClothesNotFoundException.withMissingIds(missing);
+        }
+
+        Set<UUID> unauthorized = uniqueIds.stream()
+            .filter(id -> {
+                Clothes clothes = clothesById.get(id);
+                return clothes == null
+                    || clothes.getOwner() == null
+                    || !author.getId().equals(clothes.getOwner().getId());
+            })
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (!unauthorized.isEmpty()) {
+            throw FeedClothesUnmatchOwner.withUnauthorizedIds(unauthorized);
+        }
+
+        List<Clothes> orderedClothes = uniqueIds.stream()
+            .map(clothesById::get)
+            .toList();
+
+        Feed feed = Feed.builder()
+            .author(author)
+            .weather(weather)
+            .content(req.content())
+            .build();
+
+        feed.attachClothes(orderedClothes);
+        Feed saved = feedRepository.save(feed);
+
+        FeedCreatedEventDto eventDto = new FeedCreatedEventDto(
+            saved.getId(),
+            saved.getContent(),
+            new UserSummary(author.getId(), author.getName(), author.getProfileImageUrl())
+        );
+        eventPublisher.publishEvent(new FeedCreatedEvent(eventDto, Instant.now()));
+
+        log.info("[FeedService] Feed 생성 완료 authorId = {}", req.authorId());
+
+        return feedMapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<FeedDto> getFeeds(String cursor,
+                                          UUID idAfter,
+                                          Integer limit,
+                                          String sortBy,
+                                          String sortDirection,
+                                          String keywordLike,
+                                          String skyStatusEqual,
+                                          String precipitationTypeEqual,
+                                          UUID authorIdEqual) {
+
+        log.info("[FeedService] Feed 조회 시작");
+
+        int pageLimit = (limit == null || limit <= 0) ? 10 : Math.min(limit, 50);
+
+        FeedSortKey sortKey = FeedSortKey.from(sortBy);
+        boolean ascending = "ASCENDING".equalsIgnoreCase(sortDirection);
+
+        List<Feed> feeds = feedRepository.findFeedsWithCursor(cursor, idAfter, pageLimit, sortKey, ascending,
+            keywordLike, skyStatusEqual, precipitationTypeEqual, authorIdEqual);
+
+        boolean hasNext = feeds.size() > pageLimit;
+        List<Feed> content = hasNext ? feeds.subList(0, pageLimit) : feeds;
+
+        String nextCursor = null;
+        UUID nextIdAfter = null;
+
+        if (hasNext && !content.isEmpty()) {
+            Feed last = content.get(content.size() - 1);
+            if (sortKey == FeedSortKey.CREATED_AT) {
+                if (last.getCreatedAt() != null) {
+                    nextCursor = last.getCreatedAt().toString();
+                } else {
+                    nextCursor = null;
+                }
+            } else {
+                nextCursor = String.valueOf(last.getLikeCount());
+            }
+            nextIdAfter = last.getId();
+        }
+
+        UUID currentUserId = currentUserId();
+        Set<UUID> likedFeedIds = Set.of();
+        boolean hasCurrentUser;
+
+        if (currentUserId != null) {
+            hasCurrentUser = true;
+        } else {
+            hasCurrentUser = false;
+        }
+
+        if (hasCurrentUser && !content.isEmpty()) {
+            List<UUID> feedIds = content.stream()
+                .map(Feed::getId)
+                .toList();
+
+            likedFeedIds = feedLikeRepository.findByUser_IdAndFeed_IdIn(currentUserId, feedIds).stream()
+                .map(feedLike -> feedLike.getFeed().getId())
+                .collect(Collectors.toSet());
+        }
+
+        Set<UUID> finalLikedFeedIds = likedFeedIds;
+        boolean finalHasCurrentUser = hasCurrentUser;
+
+        long totalCount = feedRepository.countFeeds(keywordLike, skyStatusEqual, precipitationTypeEqual, authorIdEqual);
+        List<FeedDto> data = content.stream()
+            .map(feedMapper::toDto)
+            .map(dto -> dto.withLikedByMe(finalHasCurrentUser && finalLikedFeedIds.contains(dto.id())))
+            .toList();
+
+        log.info("[FeedService] Feed 조회 완료");
+
+        return new PageResponse<>(
+            data,
+            nextCursor,
+            nextIdAfter,
+            hasNext,
+            totalCount,
+            sortKey == FeedSortKey.CREATED_AT ? "createdAt" : "likeCount",
+            ascending ? "ASCENDING" : "DESCENDING"
+        );
+    }
+
+    @Override
+    @Transactional
+    public FeedDto updateFeed(UUID feedId, FeedUpdateRequest request) {
+        log.info("[FeedService] Feed 수정 시작 feedId = {}", feedId);
+
+        Feed feed = feedRepository.findById(feedId)
+            .orElseThrow(() -> new FeedNotFoundException(feedId));
+
+        UUID currentUserId = currentUserId();
+        User author = feed.getAuthor();
+        UUID authorId = (author != null) ? author.getId() : null;
+
+        if (authorId == null || !authorId.equals(currentUserId)) {
+            throw new FeedAuthorUnmatchException(authorId);
+        }
+
+        feed.updateContent(request.content());
+
+        log.info("[FeedService] Feed 수정 완료 feedId = {}", feedId);
+
+        return feedMapper.toDto(feed);
+    }
+
+    @Override
+    @Transactional
+    public void deleteFeed(UUID feedId) {
+        log.info("[FeedService] Feed 삭제 시작 feedId = {}", feedId);
+
+        Feed feed = feedRepository.findById(feedId)
+            .orElseThrow(() -> new FeedNotFoundException(feedId));
+
+        UUID currentUserId = currentUserId();
+        User author = feed.getAuthor();
+        UUID authorId = (author != null) ? author.getId() : null;
+
+        if (authorId == null || !authorId.equals(currentUserId)) {
+            throw new FeedAuthorUnmatchException(authorId);
+        }
+
+        feedRepository.delete(feed);
+
+        log.info("[FeedService] Feed 삭제 완료 feedId = {}", feedId);
+    }
+
+    // 로그인한 사용자 ID 가져오는 메서드
+    private UUID currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof OtbooUserDetails details)) {
+            throw new AuthorizationDeniedException("인증 정보가 없습니다.");
+        }
+        return details.getUserDto().id();
+    }
+}

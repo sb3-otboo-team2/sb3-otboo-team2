@@ -1,13 +1,16 @@
 package org.ikuzo.otboo.global.dto;
 
 import java.util.List;
+import java.util.UUID;
 
 public record PageResponse<T>(
-    List<T> content,
+    List<T> data,
     Object nextCursor,
-    int size,
+    UUID nextIdAfter,
     boolean hasNext,
-    Long totalElements
+    Long totalCount,
+    String sortBy,
+    String sortDirection
 ) {
 
 }

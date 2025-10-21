@@ -1,0 +1,46 @@
+{
+  "family": "ikuzo-app-task",
+  "networkMode": "bridge",
+  "requiresCompatibilities": ["EC2"],
+  "cpu": "512",
+  "memory": "768",
+  "executionRoleArn": "arn:aws:iam::867930415693:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "app",
+      "image": "public.ecr.aws/j5n8s8m1/ikuzo:latest",
+      "cpu": 512,
+      "memory": 768,
+      "essential": true,
+      "environmentFiles": [
+        {
+          "type": "s3",
+          "value": "arn:aws:s3:::ikuzo-team2/.env"
+        }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 0,
+          "protocol": "tcp"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/actuator/health || exit 1"],
+        "interval": 30,
+        "retries": 5,
+        "startPeriod": 300,
+        "timeout": 30
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ikuzo-app-task",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "app",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}
