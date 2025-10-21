@@ -14,7 +14,8 @@ env:
 
   # ECS
   ECS_CLUSTER: ikuzo
-  ECS_SERVICE: ikuzo-service
+  ECS_APP_SERVICE: ikuzo-app-service
+  ECS_NGINX_SERVICE: ikuzo-nginx-service
 
 jobs:
   docker:
@@ -91,15 +92,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_S3_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 태스크 정의 파일을 로컬에서 읽어서, 두 컨테이너(app, nginx)의 image를 sha 태그로 치환
-      - name: Prepare final task definition (set both app/nginx images)
+      # 태스크 정의 파일들을 로컬에서 읽어서, 각각의 image를 sha 태그로 치환
+      - name: Prepare final task definitions (set app and nginx images)
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           APP_IMG="$ECR_APP_REPO_URI:$IMAGE_TAG"
           NGINX_IMG="$ECR_NGINX_REPO_URI:$IMAGE_TAG"
 
-          jq --arg app "$APP_IMG" --arg ngx "$NGINX_IMG" '
+          # App task definition 업데이트
+          jq --arg app "$APP_IMG" '
             del(
               .taskDefinitionArn,
               .revision,
@@ -109,56 +111,92 @@ jobs:
               .registeredAt,
               .registeredBy
             )
-            | .containerDefinitions = (
-                .containerDefinitions
-                | map(
-                    if .name == "app" then .image = $app
-                    elif .name == "nginx" then .image = $ngx
-                    else .
-                    end
-                  )
-              )
-          ' task-definition.json > final-task-def.json
+            | .containerDefinitions[0].image = $app
+          ' task-definition-app.json > final-app-task-def.json
 
-      - name: Register new task definition
-        id: register-task
+          # Nginx task definition 업데이트
+          jq --arg ngx "$NGINX_IMG" '
+            del(
+              .taskDefinitionArn,
+              .revision,
+              .status,
+              .requiresAttributes,
+              .compatibilities,
+              .registeredAt,
+              .registeredBy
+            )
+            | .containerDefinitions[0].image = $ngx
+          ' task-definition-nginx.json > final-nginx-task-def.json
+
+      - name: Register new task definitions
+        id: register-tasks
         run: |
-          arn=$(aws ecs register-task-definition \
-            --cli-input-json file://final-task-def.json \
+          # App task definition 등록
+          APP_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://final-app-task-def.json \
             --query "taskDefinition.taskDefinitionArn" --output text)
-          echo "task_def_arn=$arn" >> $GITHUB_OUTPUT
+          echo "app_task_def_arn=$APP_ARN" >> $GITHUB_OUTPUT
+          
+          # Nginx task definition 등록
+          NGINX_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://final-nginx-task-def.json \
+            --query "taskDefinition.taskDefinitionArn" --output text)
+          echo "nginx_task_def_arn=$NGINX_ARN" >> $GITHUB_OUTPUT
 
-      - name: Stop existing ECS service temporarily
+      - name: Stop existing ECS services temporarily
         run: |
+          # App 서비스 중지
           aws ecs update-service \
             --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
-            --desired-count 0
+            --service $ECS_APP_SERVICE \
+            --desired-count 0 || echo "App service not found or already stopped"
+          
+          # Nginx 서비스 중지
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_NGINX_SERVICE \
+            --desired-count 0 || echo "Nginx service not found or already stopped"
+          
+          # 서비스들이 안정화될 때까지 대기
           aws ecs wait services-stable \
             --cluster $ECS_CLUSTER \
-            --services $ECS_SERVICE
+            --services $ECS_APP_SERVICE $ECS_NGINX_SERVICE || echo "Services already stable"
 
-      - name: Deploy new task definition to ECS service
+      - name: Deploy new task definitions to ECS services
         run: |
+          # App 서비스 배포 (2개 인스턴스)
           aws ecs update-service \
             --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
-            --task-definition ${{ steps.register-task.outputs.task_def_arn }} \
+            --service $ECS_APP_SERVICE \
+            --task-definition ${{ steps.register-tasks.outputs.app_task_def_arn }} \
+            --desired-count 2
+          
+          # Nginx 서비스 배포 (1개 인스턴스)
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_NGINX_SERVICE \
+            --task-definition ${{ steps.register-tasks.outputs.nginx_task_def_arn }} \
             --desired-count 1
+          
+          # 서비스들이 안정화될 때까지 대기
           aws ecs wait services-stable \
             --cluster $ECS_CLUSTER \
-            --services $ECS_SERVICE
+            --services $ECS_APP_SERVICE $ECS_NGINX_SERVICE
 
       - name: Deployment success
         if: success()
         run: |
           echo "::notice::✅ Deployed!"
-          echo "Task Definition: ${{ steps.register-task.outputs.task_def_arn }}"
+          echo "App Task Definition: ${{ steps.register-tasks.outputs.app_task_def_arn }}"
+          echo "Nginx Task Definition: ${{ steps.register-tasks.outputs.nginx_task_def_arn }}"
+          echo "App Service: $ECS_APP_SERVICE (2 instances)"
+          echo "Nginx Service: $ECS_NGINX_SERVICE (1 instance)"
 
       - name: Deployment failed
         if: failure()
         run: |
           echo "::error::❌ Deployment failed. Check ECS events & CloudWatch logs."
+          echo "Check services: $ECS_APP_SERVICE, $ECS_NGINX_SERVICE"
 
       # latest 외 태그 정리
       - name: Clean up old ECR Public images (keep only 'latest')
