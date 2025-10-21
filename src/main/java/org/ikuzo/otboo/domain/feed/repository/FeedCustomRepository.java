@@ -13,9 +13,11 @@ public interface FeedCustomRepository {
                                    boolean ascending,
                                    String keywordLike,
                                    String skyStatusEqual,
-                                   String precipitationTypeEqual);
+                                   String precipitationTypeEqual,
+                                   UUID authorIdEqual);
 
     long countFeeds(String keywordLike,
                     String skyStatusEqual,
-                    String precipitationTypeEqual);
+                    String precipitationTypeEqual,
+                    UUID authorIdEqual);
 }

@@ -39,26 +39,27 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
                                           boolean ascending,
                                           String keywordLike,
                                           String skyStatusEqual,
-                                          String precipitationTypeEqual) {
+                                          String precipitationTypeEqual,
+                                          UUID authorIdEqual) {
         QFeed feed = QFeed.feed;
         QWeather weather = QWeather.weather;
         QUser author = QUser.user;
         QFeedClothes feedClothes = QFeedClothes.feedClothes;
         QClothes clothes = QClothes.clothes;
 
-        // where 필터
-        BooleanBuilder filter = buildBaseFilter(keywordLike, skyStatusEqual, precipitationTypeEqual,
-            feed, weather);
+        BooleanBuilder filter = buildBaseFilter(keywordLike, skyStatusEqual, precipitationTypeEqual, authorIdEqual,
+            feed, weather, author);
 
-        // 커서 이후 데이터 가저오는 조건 식
         BooleanExpression cursorPredicate = buildCursorPredicate(sortKey, ascending, cursor, idAfter, feed);
         if (cursorPredicate != null) {
             filter.and(cursorPredicate);
         }
 
+        // 1차 쿼리: ID만 조회하여 페이징 안정성 확보
         JPAQuery<UUID> idQuery = queryFactory.select(feed.id)
             .from(feed)
             .leftJoin(feed.weather, weather)
+            .leftJoin(feed.author, author)
             .where(filter)
             .limit(limit + 1L);
 
@@ -69,6 +70,7 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
             return List.of();
         }
 
+        // 2차 쿼리: 필요한 연관 데이터를 fetch join으로 로딩
         JPAQuery<Feed> query = queryFactory.selectDistinct(feed)
             .from(feed)
             .leftJoin(feed.weather, weather).fetchJoin()
@@ -77,18 +79,18 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
             .leftJoin(feedClothes.clothes, clothes).fetchJoin()
             .where(feed.id.in(feedIds));
 
-        List<Feed> feeds = query.fetch();
+        List<Feed> rows = query.fetch();
 
-        Map<UUID, Feed> feedById = new HashMap<>();
-        for (Feed feedEntity : feeds) {
-            feedById.put(feedEntity.getId(), feedEntity);
+        Map<UUID, Feed> feedsById = new HashMap<>();
+        for (Feed entity : rows) {
+            feedsById.put(entity.getId(), entity);
         }
 
         List<Feed> orderedFeeds = new ArrayList<>(feedIds.size());
         for (UUID feedId : feedIds) {
-            Feed feedEntity = feedById.get(feedId);
-            if (feedEntity != null) {
-                orderedFeeds.add(feedEntity);
+            Feed entity = feedsById.get(feedId);
+            if (entity != null) {
+                orderedFeeds.add(entity);
             }
         }
 
@@ -98,13 +100,14 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
     @Override
     public long countFeeds(String keywordLike,
                            String skyStatusEqual,
-                           String precipitationTypeEqual) {
+                           String precipitationTypeEqual,
+                           UUID authorIdEqual) {
         QFeed feed = QFeed.feed;
         QWeather weather = QWeather.weather;
         QUser author = QUser.user;
 
-        BooleanBuilder filter = buildBaseFilter(keywordLike, skyStatusEqual, precipitationTypeEqual,
-            feed, weather);
+        BooleanBuilder filter = buildBaseFilter(keywordLike, skyStatusEqual, precipitationTypeEqual, authorIdEqual,
+            feed, weather, author);
 
         Long total = queryFactory.select(feed.id.countDistinct())
             .from(feed)
@@ -116,15 +119,15 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
         return total != null ? total : 0L;
     }
 
-    // where 필터
     private BooleanBuilder buildBaseFilter(String keywordLike,
                                            String skyStatusEqual,
                                            String precipitationTypeEqual,
+                                           UUID authorIdEqual,
                                            QFeed feed,
-                                           QWeather weather) {
+                                           QWeather weather,
+                                           QUser author) {
         BooleanBuilder builder = new BooleanBuilder();
 
-        // 대소문자 무시 검색
         if (keywordLike != null && !keywordLike.isBlank()) {
             builder.and(
                 Expressions.booleanTemplate(
@@ -143,10 +146,13 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
             builder.and(weather.precipitationType.eq(precipitationTypeEqual.trim().toUpperCase()));
         }
 
+        if (authorIdEqual != null) {
+            builder.and(author.id.eq(authorIdEqual));
+        }
+
         return builder;
     }
 
-    // 커서 페이징네이션 조건 만드는 메서드
     private BooleanExpression buildCursorPredicate(FeedSortKey sortKey,
                                                    boolean ascending,
                                                    String cursor,
@@ -155,6 +161,7 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
         if (cursor == null || cursor.isBlank()) {
             return null;
         }
+
         if (sortKey == FeedSortKey.CREATED_AT) {
             Instant cursorInstant = parseInstant(cursor);
             if (cursorInstant == null) {
@@ -182,7 +189,6 @@ public class FeedCustomRepositoryImpl implements FeedCustomRepository {
         return primary;
     }
 
-    // 정렬 조건 적용하는 메서드
     private void applyOrder(JPAQuery<?> query, FeedSortKey sortKey, boolean ascending, QFeed feed) {
         if (sortKey == FeedSortKey.CREATED_AT) {
             OrderSpecifier<Instant> primary = ascending ? feed.createdAt.asc() : feed.createdAt.desc();
