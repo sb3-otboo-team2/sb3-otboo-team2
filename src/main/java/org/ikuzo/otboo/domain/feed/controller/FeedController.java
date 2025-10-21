@@ -41,10 +41,11 @@ public class FeedController {
         @RequestParam(required = false, defaultValue = "DESCENDING") String sortDirection,
         @RequestParam(required = false) String keywordLike,
         @RequestParam(required = false) String skyStatusEqual,
-        @RequestParam(required = false) String precipitationTypeEqual
+        @RequestParam(required = false) String precipitationTypeEqual,
+        @RequestParam(required = false) UUID authorIdEqual
     ) {
         PageResponse<FeedDto> response = feedService.getFeeds(cursor, idAfter, limit, sortBy, sortDirection,
-            keywordLike, skyStatusEqual, precipitationTypeEqual);
+            keywordLike, skyStatusEqual, precipitationTypeEqual, authorIdEqual);
         return ResponseEntity.ok(response);
     }
 

@@ -129,7 +129,8 @@ public class FeedServiceImpl implements FeedService {
                                           String sortDirection,
                                           String keywordLike,
                                           String skyStatusEqual,
-                                          String precipitationTypeEqual) {
+                                          String precipitationTypeEqual,
+                                          UUID authorIdEqual) {
 
         log.info("[FeedService] Feed 조회 시작");
 
@@ -139,7 +140,7 @@ public class FeedServiceImpl implements FeedService {
         boolean ascending = "ASCENDING".equalsIgnoreCase(sortDirection);
 
         List<Feed> feeds = feedRepository.findFeedsWithCursor(cursor, idAfter, pageLimit, sortKey, ascending,
-            keywordLike, skyStatusEqual, precipitationTypeEqual);
+            keywordLike, skyStatusEqual, precipitationTypeEqual, authorIdEqual);
 
         boolean hasNext = feeds.size() > pageLimit;
         List<Feed> content = hasNext ? feeds.subList(0, pageLimit) : feeds;
@@ -184,7 +185,7 @@ public class FeedServiceImpl implements FeedService {
         Set<UUID> finalLikedFeedIds = likedFeedIds;
         boolean finalHasCurrentUser = hasCurrentUser;
 
-        long totalCount = feedRepository.countFeeds(keywordLike, skyStatusEqual, precipitationTypeEqual);
+        long totalCount = feedRepository.countFeeds(keywordLike, skyStatusEqual, precipitationTypeEqual, authorIdEqual);
         List<FeedDto> data = content.stream()
             .map(feedMapper::toDto)
             .map(dto -> dto.withLikedByMe(finalHasCurrentUser && finalLikedFeedIds.contains(dto.id())))
