@@ -116,46 +116,6 @@ public class NotificationRequiredTopicListener {
     @Transactional
     public void onClothesAttributeDefCreatedEvent(String kafkaEvent) {
         try {
-            log.info("Kafka 메시지 수신 (의상 속성 추가): {}", kafkaEvent);
-            ClothesAttributeDefCreatedEvent event = objectMapper.readValue(kafkaEvent,
-                ClothesAttributeDefCreatedEvent.class);
-
-            String title = "새로운 의상 속성이 추가되었습니다";
-            String content = "내 의상에 [" + event.getDto().name() + "]을 추가해보세요.";
-
-            final int BATCH_SIZE = 1000;
-            int totalUsers = 0;
-            int batchCount = 0;
-            
-            try (Stream<UUID> userIdStream = userRepository.streamUserIdsByLockedFalse()) {
-                Set<UUID> batch = new HashSet<>();
-                userIdStream.forEach(userId -> {
-                    batch.add(userId);
-                    if (batch.size() >= BATCH_SIZE) {
-                        notificationService.create(Set.copyOf(batch), title, content, Level.INFO);
-                        batch.clear();
-                    }
-                });
-
-                if (!batch.isEmpty()) {
-                    totalUsers += batch.size();
-                    batchCount++;
-                    notificationService.create(batch, title, content, Level.INFO);
-                }
-            }
-            
-            log.info("의상 속성 추가 알림 생성 완료 - 총 사용자 수: {}, 배치 수: {}", totalUsers, batchCount);
-        } catch (JsonProcessingException e) {
-            log.error("Kafka 메시지 역직렬화 실패 (의상 속성 추가): {}", kafkaEvent, e);
-        } catch (Exception e) {
-            log.error("의상 속성 추가 알림 생성 실패: {}", kafkaEvent, e);
-        }
-    }
-
-    @KafkaListener(topics = "otboo.ClothesAttributeDefCreatedEvent")
-    @Transactional
-    public void onClothesAttributeDefCreatedEvent(String kafkaEvent) {
-        try {
             ClothesAttributeDefCreatedEvent event = objectMapper.readValue(kafkaEvent,
                 ClothesAttributeDefCreatedEvent.class);
 
