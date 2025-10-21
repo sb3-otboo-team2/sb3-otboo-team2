@@ -7,7 +7,6 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,10 +23,6 @@ import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
     indexes = {
         @Index(name = "idx_clothes_attr_clothes", columnList = "clothes_id"),
         @Index(name = "idx_clothes_attr_def", columnList = "definition_id")
-    },
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_clothes_attr_unique", columnNames = {"clothes_id",
-            "definition_id"})
     }
 )
 @Getter
@@ -50,7 +45,6 @@ public class ClothesAttribute extends BaseUpdatableEntity {
         if (newValue == null || newValue.isBlank()) {
             throw new MissingRequiredFieldException("optionValue 비어있음");
         }
-        // 선택지 검증(있을 때만)
         if (definition != null && definition.getOptions() != null && !definition.getOptions()
             .isEmpty()) {
             boolean allowed = definition.getOptions().stream()

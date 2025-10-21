@@ -125,7 +125,7 @@ public class ClothesServiceImpl implements ClothesService {
 
         validateUpdateRequest(clothesId, request);
 
-        Clothes clothes = clothesRepository.findById(clothesId)
+        Clothes clothes = clothesRepository.findByIdWithAttributes(clothesId)
             .orElseThrow(() -> new ClothesNotFoundException(clothesId));
 
         clothes.updateNameAndType(request.name(), request.type());
@@ -224,16 +224,10 @@ public class ClothesServiceImpl implements ClothesService {
                 .findFirst();
 
             if (existingAttr.isPresent()) {
-                ClothesAttribute existing = existingAttr.get();
-                List<String> selectable = getSelectableValues(existing.getDefinition());
-                if (!selectable.isEmpty() && !selectable.contains(newValue)) {
-                    throw new InvalidAttributeOptionException(
-                        "해당 속성에서 선택 불가한 옵션 값 입니다. definition=" + existing.getDefinition().getName()
-                            + ", 입력값=" + newValue + ", 허용=" + selectable);
-                }
-                existing.updateOptionValue(newValue);
+                existingAttr.get().updateOptionValue(newValue);
             } else {
-                clothes.getAttributes().add(toClothesAttribute(clothes, dto));
+                ClothesAttribute newAttr = toClothesAttribute(clothes, dto);
+                clothes.getAttributes().add(newAttr);
             }
         }
     }

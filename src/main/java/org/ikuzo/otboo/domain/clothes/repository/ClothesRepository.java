@@ -13,15 +13,23 @@ import org.springframework.stereotype.Repository;
 public interface ClothesRepository extends JpaRepository<Clothes, UUID>, ClothesRepositoryCustom {
 
     @Query(value = """
-    SELECT c.*
-    FROM clothes c
-    WHERE c.owner_id = :ownerId
-      AND c.type = :type
-    ORDER BY random()
-    LIMIT 1
-""", nativeQuery = true)
+            SELECT c.*
+            FROM clothes c
+            WHERE c.owner_id = :ownerId
+              AND c.type = :type
+            ORDER BY random()
+            LIMIT 1
+        """, nativeQuery = true)
     Optional<Clothes> pickRandomClothes(@Param("ownerId") UUID ownerId,
         @Param("type") String type);
 
     List<Clothes> findByOwnerId(UUID ownerId);
+
+    @Query("""
+        select c from Clothes c
+        left join fetch c.attributes a
+        left join fetch a.definition d
+        where c.id = :id
+        """)
+    Optional<Clothes> findByIdWithAttributes(UUID id);
 }
