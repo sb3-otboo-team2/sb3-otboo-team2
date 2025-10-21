@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.ikuzo.otboo.domain.clothes.exception.MissingRequiredFieldException;
 import org.ikuzo.otboo.global.base.BaseUpdatableEntity;
 
 @Builder
@@ -43,5 +44,12 @@ public class ClothesAttribute extends BaseUpdatableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "definition_id", nullable = false)
     private ClothesAttributeDef definition;
+
+    public void updateOptionValue(String newValue) {
+        if (newValue == null || newValue.isBlank()) {
+            throw new MissingRequiredFieldException("optionValue 비어있음");
+        }
+        this.optionValue = newValue;
+    }
 
 }

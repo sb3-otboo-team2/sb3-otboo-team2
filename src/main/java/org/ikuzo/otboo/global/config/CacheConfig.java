@@ -46,20 +46,6 @@ public class CacheConfig {
                 .recordStats()
                 .build());
 
-        CaffeineCache clothes = new CaffeineCache("clothes",
-            Caffeine.newBuilder()
-                .expireAfterAccess(600, TimeUnit.SECONDS)
-                .maximumSize(1000)
-                .recordStats()
-                .build());
-
-        CaffeineCache clothesAttributeDef = new CaffeineCache("clothesAttributeDef",
-            Caffeine.newBuilder()
-                .expireAfterAccess(3600, TimeUnit.SECONDS)
-                .maximumSize(100)
-                .recordStats()
-                .build());
-
         CaffeineCache weatherByCoordinates = new CaffeineCache("weatherByCoordinates",
             Caffeine.newBuilder()
                 .expireAfterWrite(30, TimeUnit.MINUTES)
@@ -72,8 +58,6 @@ public class CacheConfig {
             followers,
             followings,
             followSummary,
-            clothes,
-            clothesAttributeDef,
             weatherByCoordinates
         ));
         cacheManager.initializeCaches();

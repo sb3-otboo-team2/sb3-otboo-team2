@@ -2,6 +2,7 @@ package org.ikuzo.otboo.domain.clothes.service.impl;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -203,14 +204,32 @@ public class ClothesServiceImpl implements ClothesService {
     }
 
     private void replaceAttribute(Clothes clothes, List<ClothesAttributeDto> dtos) {
+        if (dtos == null) {
+            return;
+        }
 
-        clothes.getAttributes().clear();
 
         for (ClothesAttributeDto dto : dtos) {
             if (dto == null) {
                 continue;
             }
-            clothes.getAttributes().add(toClothesAttribute(clothes, dto));
+
+            UUID defId = dto.definitionId();
+            String newValue = dto.value() == null ? null : dto.value().trim();
+
+            // 기존 속성 찾기
+            Optional<ClothesAttribute> existingAttr = clothes.getAttributes().stream()
+                .filter(attr -> attr.getDefinition().getId().equals(defId))
+                .findFirst();
+
+            if (existingAttr.isPresent()) {
+                // 기존 속성이 있으면 값만 업데이트
+                ClothesAttribute existing = existingAttr.get();
+                existing.updateOptionValue(newValue); // 이 메서드를 ClothesAttribute에 추가 필요
+            } else {
+                // 새로운 속성 추가
+                clothes.getAttributes().add(toClothesAttribute(clothes, dto));
+            }
         }
     }
 
