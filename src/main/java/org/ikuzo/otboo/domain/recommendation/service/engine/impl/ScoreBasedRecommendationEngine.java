@@ -26,19 +26,24 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ScoreBasedRecommendationEngine implements RecommendationEngine {
+public class
+ScoreBasedRecommendationEngine implements RecommendationEngine {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final ClothesRepository clothesRepository;
 
-    // 아우터 추천 기준
-    private static final double OUTER_NEED_NIGHT_COOL = 21.0; // ptNight ≤ 21 → 아우터 필요
-    private static final double OUTER_NEED_CURRENT_HOT = 23.0; // 현재 온도를 기반으로 아우터 판단
+    // 아우터 판단 구간과 보너스
+    private static final double OUTER_DECISION_LOWER = 17.0;
+    private static final double OUTER_DECISION_UPPER = 23.0;
+
+    // 레이어링 점수
+    private static final int BONUS_TOP_THIN_WITH_OUTER   = 2; // 얇은 상의 + 아우터
+    private static final int BONUS_TOP_MEDIUM_NO_OUTER   = 2; // 보통 상의 + 아우터 없음
 
     // 과도기 온도 기준
-    private static final double MARCH_COLD_PT = 12.0;  // 이하면 겨울로 보는 쪽
-    private static final double SEPT_HOT_PT = 25.0;  // 이상이면 여름으로 보는 쪽
+    private static final double WINTER_TRANSITION_TEMP = 12.0;  // 이하면 겨울로 보는 쪽
+    private static final double SUMMER_TRANSITION_TEMP = 25.0;  // 이상이면 여름으로 보는 쪽
 
     // 계절 약가점
     private static final int SEASON_PREF_EXACT = 3;  // 현재 계절 정확 일치
@@ -68,18 +73,21 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
     // 동률/근접 후보 내 다양성
     private static final int NEAR_BEST_DELTA = 2;
 
+
+
     private static final Map<String, Set<String>> COMPAT = Map.of(
         "캐주얼", Set.of("캐주얼", "빈티지", "러블리"),
         "미니멀", Set.of("미니멀", "포멀", "시크"),
         "포멀", Set.of("포멀", "미니멀", "시크"),
         "시크", Set.of("시크", "미니멀", "포멀"),
         "빈티지", Set.of("빈티지", "캐주얼"),
-        "러블리", Set.of("러블리", "캐주얼")
+        "러블리", Set.of("러블리", "캐주얼"),
+        "스포츠", Set.of("스포츠", "캐주얼")
     );
 
     @Override
     public List<Clothes> recommend(User owner, Weather weather) {
-        final double ta = nz(weather.getTemperatureCurrent(), 20.0);
+        final double ta = nz(weather.getTemperatureMax(), 20.0);
         final double rh = nz(weather.getHumidityCurrent(), 50.0);
         final double wind = windMs(weather);
         final double minC = nz(weather.getTemperatureMin(), ta);
@@ -120,6 +128,8 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
                 log.info("아우터 필요하지만 후보 미달 - OUTER 없이 진행");
                 return pickWithoutOuter(byType, seasonNow, precipitation, precipitationProb, ptDay, ptNight);
             }
+
+            log.info("선택된 아우터 - {}", outer.getName());
 
             List<Clothes> result = new ArrayList<>();
             result.add(outer);
@@ -175,10 +185,17 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
     // ───────── 내부 선택 로직 ─────────
 
     /**
-     * 저녁 온도 < 20 || 현재 온도 < 23 이면 아우터가 필요한 상황으로 판정
+     * 최저 온도 < 17 이면 아우터가 필요한 상황으로 판정
+     * 최고 온도 > 23 이면 아우터가 필요없는 상황으로 판정
      */
     private boolean isOuterNeeded(double ptDay, double ptNight) {
-        return ptNight <= OUTER_NEED_NIGHT_COOL || ptDay <= OUTER_NEED_CURRENT_HOT;
+        if (ptNight < OUTER_DECISION_LOWER) {
+            return true;
+        }
+        if (ptDay > OUTER_DECISION_UPPER) {
+            return false;
+        }
+        return ThreadLocalRandom.current().nextBoolean();
     }
 
     /**
@@ -244,7 +261,7 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
     }
 
     /**
-     * 최고 점수를 받은 의상을 기준으로 1점 이내의 의상들을 랜덤 추천
+     * 최고 점수를 받은 의상을 기준으로 2점 이내의 의상들을 랜덤 추천
      * 임계점을 통과 못 하면 해당 카테고리는 추천하지 않음
      */
     private Clothes pickBestWithFloor(
@@ -311,11 +328,12 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
         int sSeason = seasonAffinityScore(seasonNow, itemSeason);
         int sStyle = styleScore(anchorStyle, itemStyle);
         int sPenalty = materialPenalty(c, precipitation, precipitationProb);
-        int sThick = thicknessScore(c, anchor, ptDay, ptNight);
+        int sThick = thicknessScore(c, ptDay, ptNight);
+        int sLayer = presenceLayeringBonus(c, anchor, ptDay);
 
-        int total = sSeason + sStyle + sPenalty + sThick;
-        log.info("의상: {}, 점수 - Season:{}, Style:{}, Penalty:{}, Thick:{}, Total:{}",
-            c.getName(), sSeason, sStyle, sPenalty, sThick, total);
+        int total = sSeason + sStyle + sPenalty + sThick + sLayer;
+        log.info("의상: {}, 점수 - Season:{}, Style:{}, Penalty:{}, Thick:{}, Presence:{}, Total:{}",
+            c.getName(), sSeason, sStyle, sPenalty, sThick, sLayer, total);
         return total;
     }
 
@@ -412,40 +430,18 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
     /**
      * 두께 가점(아우터와 상의는 현재 온도에 따른 적절성 판정)
      */
-    private int thicknessScore(Clothes c, Clothes anchor, double ptDay, double ptNight) {
-        String t = attr(c, "두께"); // "얇음"/"보통"/"두꺼움"
+    private int thicknessScore(Clothes c, double ptDay, double ptNight) {
+        String t = attr(c, "두께");
         if (t == null || t.isBlank()) {
             return 0;
         }
 
-        int base = switch (c.getType()) {
-            case TOP, DRESS -> scoreTopLike(t, ptDay);
+        return switch (c.getType()) {
             case OUTER -> scoreOuter(t, ptNight);
+            case TOP, DRESS -> scoreTopLike(t, ptDay);
+            case BOTTOM -> scoreBottom(t, ptDay);
             default -> 0;
         };
-
-        int layering = 0;
-        if (c.getType() == ClothesType.TOP) {
-            if (anchor != null && anchor.getType() == ClothesType.OUTER) {
-                String outerThick = attr(anchor, "두께");
-                if ("얇음".equals(outerThick)) {
-                    if ("얇음".equals(t)) {
-                        layering += 2;
-                    } else if ("보통".equals(t)) {
-                        layering += 1;
-                    }
-                } else if ("보통".equals(outerThick)) {
-                    if ("얇음".equals(t) || "보통".equals(t)) {
-                        layering += 1;
-                    }
-                }
-            } else {
-                if (ptDay >= 18 && ptDay <= 22 && "보통".equals(t)) {
-                    layering += 2;
-                }
-            }
-        }
-        return base + layering;
     }
 
     /**
@@ -477,6 +473,13 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
             return switch (t) {
                 case "얇음" -> -2;
                 case "보통" -> +4;
+                case "두꺼움" -> +2;
+                default -> -2;
+            };
+        } else if (ptDay >= 5) {
+            return switch (t) {
+                case "얇음" -> -6;
+                case "보통" -> +2;
                 case "두꺼움" -> +2;
                 default -> -2;
             };
@@ -515,12 +518,19 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
                 case "두꺼움" -> -10;
                 default -> -10;
             };
-        } else if (ptNight >= 10) {
+        } else if (ptNight >= 8) {
             return switch (t) {
                 case "얇음" -> 0;
                 case "보통" -> +4;
                 case "두꺼움" -> -2;
                 default -> 0;
+            };
+        }else if (ptNight >= 5) {
+            return switch (t) {
+                case "얇음" -> -5;
+                case "보통" -> +4;
+                case "두꺼움" -> +2;
+                default -> -2;
             };
         } else {
             return switch (t) {
@@ -530,6 +540,81 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
                 default -> 0;
             };
         }
+    }
+
+    /**
+     * ptDay 구간별 Bottom 두께 점수
+     */
+    private int scoreBottom(String t, double ptDay) {
+        if (ptDay >= 27) {
+            return switch (t) {
+                case "얇음" -> +5;
+                case "보통" -> 0;
+                case "두꺼움" -> -20;
+                default -> -5;
+            };
+        } else if (ptDay >= 23) {
+            return switch (t) {
+                case "얇음" -> +4;
+                case "보통" -> +1;
+                case "두꺼움" -> -20;
+                default -> -5;
+            };
+        } else if (ptDay >= 18) {
+            return switch (t) {
+                case "얇음" -> +2;
+                case "보통" -> +3;
+                case "두꺼움" -> -2;
+                default -> 0;
+            };
+        } else if (ptDay >= 12) {
+            return switch (t) {
+                case "얇음" -> -2;
+                case "보통" -> +5;
+                case "두꺼움" -> +1;
+                default -> -2;
+            };
+        } else {
+            return switch (t) {
+                case "얇음" -> -10;
+                case "보통" -> 0;
+                case "두꺼움" -> +4;
+                default -> -5;
+            };
+        }
+    }
+
+    /**
+     * 17 ~ 23 구간의 기온은 아우터 + 얇은 상의와 보통 두께의 상의 중 선택하도록 가점 부여
+     */
+    private int presenceLayeringBonus(Clothes item, Clothes anchor, double ptDay) {
+
+        if (ptDay < OUTER_DECISION_LOWER || ptDay > OUTER_DECISION_UPPER) {
+            return 0;
+        }
+
+        if (item.getType() != ClothesType.TOP && item.getType() != ClothesType.DRESS) {
+            return 0;
+        }
+
+        boolean hasOuter = (anchor != null && anchor.getType() == ClothesType.OUTER);
+
+        final String raw = attr(item, "두께");
+        if (raw == null || raw.isBlank()) {
+            return 0;
+        }
+        final String t = raw.trim().toLowerCase(Locale.ROOT);
+
+        final boolean isThin   = t.equals("얇음");
+        final boolean isMedium = t.equals("보통");
+
+        if (hasOuter && isThin) {
+            return BONUS_TOP_THIN_WITH_OUTER;
+        }
+        if (!hasOuter && isMedium) {
+            return BONUS_TOP_MEDIUM_NO_OUTER;
+        }
+        return 0;
     }
 
     /**
@@ -583,10 +668,16 @@ public class ScoreBasedRecommendationEngine implements RecommendationEngine {
     private static String seasonByMonthWithTransition(Instant utc, double ptDay) {
         int m = utc.atZone(KST).getMonthValue();
         if (m == 3) {
-            return (ptDay <= MARCH_COLD_PT) ? "겨울" : "봄";
+            return (ptDay <= WINTER_TRANSITION_TEMP) ? "겨울" : "봄";
+        }
+        if (m == 6) {
+            return (ptDay >= SUMMER_TRANSITION_TEMP) ? "여름" : "봄";
         }
         if (m == 9) {
-            return (ptDay >= SEPT_HOT_PT) ? "여름" : "가을";
+            return (ptDay >= SUMMER_TRANSITION_TEMP) ? "여름" : "가을";
+        }
+        if (m == 11) {
+            return (ptDay >= WINTER_TRANSITION_TEMP) ? "가을" : "겨울";
         }
         return seasonByMonth(utc);
     }
