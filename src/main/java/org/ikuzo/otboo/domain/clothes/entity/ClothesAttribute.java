@@ -45,7 +45,6 @@ public class ClothesAttribute extends BaseUpdatableEntity {
         if (newValue == null || newValue.isBlank()) {
             throw new MissingRequiredFieldException("optionValue 비어있음");
         }
-        // 선택지 검증(있을 때만)
         if (definition != null && definition.getOptions() != null && !definition.getOptions()
             .isEmpty()) {
             boolean allowed = definition.getOptions().stream()
