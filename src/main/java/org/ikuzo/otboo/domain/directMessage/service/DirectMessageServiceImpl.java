@@ -7,6 +7,7 @@ import org.ikuzo.otboo.domain.directMessage.dto.DirectMessageDto;
 import org.ikuzo.otboo.domain.directMessage.entity.DirectMessage;
 import org.ikuzo.otboo.domain.directMessage.mapper.DirectMessageMapper;
 import org.ikuzo.otboo.domain.directMessage.repository.DirectMessageRepository;
+import org.ikuzo.otboo.domain.notification.service.NotificationService;
 import org.ikuzo.otboo.domain.user.entity.User;
 import org.ikuzo.otboo.domain.user.exception.UserNotFoundException;
 import org.ikuzo.otboo.domain.user.repository.UserRepository;
@@ -30,6 +31,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     private final UserRepository userRepository;
     private final DirectMessageMapper directMessageMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -50,10 +52,21 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
         DirectMessageDto dto = directMessageMapper.toDto(savedMessage);
 
+        // 웹소켓 실시간 전송을 위한 이벤트 발행
         eventPublisher.publishEvent(
             new MessageCreatedEvent(
                 dto, Instant.now()
             )
+        );
+
+        // DM 알림 생성
+        String title = "\"" + sender.getName() + "\"님이 메세지를 보냈어요.";
+        String content = directMessageCreateRequest.content();
+        notificationService.create(
+            java.util.Set.of(receiverId), 
+            title, 
+            content, 
+            org.ikuzo.otboo.domain.notification.entity.Level.INFO
         );
 
         return dto;

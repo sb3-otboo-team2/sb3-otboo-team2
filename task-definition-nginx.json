@@ -34,7 +34,7 @@
       "environment": [
         { "name": "DOMAIN", "value": "3.38.166.191.sslip.io" },
         { "name": "EMAIL",  "value": "hokang1870@gmail.com" },
-        { "name": "CERTBOT_STAGING", "value": "false" }
+        { "name": "CERTBOT_STAGING", "value": "true" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
