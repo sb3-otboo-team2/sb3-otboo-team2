@@ -208,26 +208,31 @@ public class ClothesServiceImpl implements ClothesService {
             return;
         }
 
-
         for (ClothesAttributeDto dto : dtos) {
             if (dto == null) {
                 continue;
             }
 
             UUID defId = dto.definitionId();
+            if (defId == null) {
+                throw new MissingRequiredFieldException("definitionId is null");
+            }
             String newValue = dto.value() == null ? null : dto.value().trim();
 
-            // 기존 속성 찾기
             Optional<ClothesAttribute> existingAttr = clothes.getAttributes().stream()
                 .filter(attr -> attr.getDefinition().getId().equals(defId))
                 .findFirst();
 
             if (existingAttr.isPresent()) {
-                // 기존 속성이 있으면 값만 업데이트
                 ClothesAttribute existing = existingAttr.get();
-                existing.updateOptionValue(newValue); // 이 메서드를 ClothesAttribute에 추가 필요
+                List<String> selectable = getSelectableValues(existing.getDefinition());
+                if (!selectable.isEmpty() && !selectable.contains(newValue)) {
+                    throw new InvalidAttributeOptionException(
+                        "해당 속성에서 선택 불가한 옵션 값 입니다. definition=" + existing.getDefinition().getName()
+                            + ", 입력값=" + newValue + ", 허용=" + selectable);
+                }
+                existing.updateOptionValue(newValue);
             } else {
-                // 새로운 속성 추가
                 clothes.getAttributes().add(toClothesAttribute(clothes, dto));
             }
         }
