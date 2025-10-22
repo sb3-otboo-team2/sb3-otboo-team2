@@ -17,6 +17,7 @@ import org.springframework.data.redis.connection.lettuce.LettuceClientConfigurat
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Slf4j
 @Configuration
@@ -32,9 +33,13 @@ public class CacheConfigRedis {
         @Value("${spring.data.redis.ssl.enabled:false}") boolean ssl) {
 
         RedisStandaloneConfiguration conf = new RedisStandaloneConfiguration(host, port);
-        if (password != null && !password.isBlank()) conf.setPassword(password);
+        if (password != null && !password.isBlank()) {
+            conf.setPassword(password);
+        }
         LettuceClientConfiguration.LettuceClientConfigurationBuilder b = LettuceClientConfiguration.builder();
-        if (ssl) b.useSsl();
+        if (ssl) {
+            b.useSsl();
+        }
         b.commandTimeout(Duration.ofSeconds(3));
         return new LettuceConnectionFactory(conf, b.build());
     }
@@ -44,23 +49,25 @@ public class CacheConfigRedis {
         log.info("Redis cache manager is enabled.");
         // 기본 직렬화(Jackson), TTL 등 공통 정책
         RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofMinutes(30))
+            .entryTtl(Duration.ofMinutes(10))
             .disableCachingNullValues()
-            .serializeValuesWith(
-                RedisSerializationContext.SerializationPair.fromSerializer(
-                    new GenericJackson2JsonRedisSerializer()));
+            .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(
+                new StringRedisSerializer()))
+            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
+                new GenericJackson2JsonRedisSerializer()));
 
         // 캐시별 세부 TTL (기존 Caffeine 설정 이름을 그대로 유지)
         Map<String, RedisCacheConfiguration> perCache = new HashMap<>();
-        perCache.put("notifications", defaults.entryTtl(Duration.ofMinutes(10)));
-        perCache.put("followers",     defaults.entryTtl(Duration.ofMinutes(5)));
-        perCache.put("followings",    defaults.entryTtl(Duration.ofMinutes(5)));
-        perCache.put("followSummary", defaults.entryTtl(Duration.ofMinutes(3)));
-        perCache.put("weatherByCoordinates", defaults.entryTtl(Duration.ofMinutes(5)));
+        perCache.put("notifications", defaults.entryTtl(Duration.ofSeconds(60)));
+        perCache.put("followers", defaults.entryTtl(Duration.ofSeconds(600)));
+        perCache.put("followings", defaults.entryTtl(Duration.ofSeconds(600)));
+        perCache.put("followSummary", defaults.entryTtl(Duration.ofSeconds(300)));
+        perCache.put("weatherByCoordinates", defaults.entryTtl(Duration.ofMinutes(30)));
 
         return RedisCacheManager.builder(cf)
             .cacheDefaults(defaults)
             .withInitialCacheConfigurations(perCache)
+            .transactionAware()
             .build();
     }
 }
