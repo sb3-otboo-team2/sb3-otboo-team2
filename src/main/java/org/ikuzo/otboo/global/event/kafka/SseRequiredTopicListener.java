@@ -28,16 +28,22 @@ public class SseRequiredTopicListener {
     public void init() {
         log.info("====================================================");
         log.info("SseRequiredTopicListener 초기화 완료");
-        log.info("Topic: otboo.NotificationCreatedEvent, GroupId: sse");
+        log.info("Topic: otboo.NotificationCreatedEvent, GroupId: sse-${random.uuid}");
+        log.info("sseService: {}", sseService != null ? "정상" : "null");
+        log.info("objectMapper: {}", objectMapper != null ? "정상" : "null");
         log.info("====================================================");
     }
 
 
     @KafkaListener(
         topics = "otboo.NotificationCreatedEvent", 
-        groupId = "sse",
+        groupId = "sse-${random.uuid}",
         autoStartup = "true",
-        concurrency = "1"
+        concurrency = "1",
+        properties = {
+            "spring.kafka.consumer.auto-offset-reset=earliest",
+            "spring.kafka.consumer.enable-auto-commit=false"
+        }
     )
     public void onNotificationCreatedEvent(String kafkaEvent) {
         try {
