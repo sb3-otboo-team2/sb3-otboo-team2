@@ -22,7 +22,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Slf4j
 @Configuration
 @EnableCaching
-@Profile("prod")
+@Profile("test")
 public class CacheConfigRedis {
 
     @Bean
