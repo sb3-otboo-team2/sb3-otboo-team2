@@ -17,7 +17,7 @@ EXPOSE 80 443
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -sf http://localhost/actuator/health || curl -sf http://localhost || exit 1
 
-ENV DOMAIN=3.38.166.191.sslip.io
+ENV DOMAIN=ikuzo.duckdns.org
 ENV EMAIL=hokang1870@gmail.com
 
 # 실행 진입점
