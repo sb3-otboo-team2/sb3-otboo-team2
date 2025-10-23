@@ -9,8 +9,8 @@ CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 CERT_PATH="$CERT_DIR/fullchain.pem"
 KEY_PATH="$CERT_DIR/privkey.pem"
 
-# 스테이징 기본 true
-if [ "${CERTBOT_STAGING:-true}" = "true" ]; then
+# 스테이징 기본 false
+if [ "${CERTBOT_STAGING:-false}" = "true" ]; then
   ACME_SERVER="--server https://acme-staging-v02.api.letsencrypt.org/directory"
   echo "[entrypoint] Using Let's Encrypt STAGING environment"
 else
@@ -76,6 +76,22 @@ fi
 # HTTP 먼저 시작
 nginx
 
+# 인증서 디렉토리 미리 생성
+mkdir -p "$CERT_DIR"
+
+# DuckDNS 도메인 DNS 확인
+echo "[entrypoint] 🔍 Checking DNS resolution for $DOMAIN..."
+if nslookup "$DOMAIN" > /dev/null 2>&1; then
+  echo "[entrypoint] ✅ DNS resolution successful for $DOMAIN"
+else
+  echo "[entrypoint] ❌ DNS resolution failed for $DOMAIN"
+  echo "[entrypoint] 💡 Please check your DuckDNS configuration:"
+  echo "   1. Go to https://www.duckdns.org/"
+  echo "   2. Login and select your domain: ikuzo"
+  echo "   3. Update the IP address to your current server IP"
+  echo "   4. Wait a few minutes for DNS propagation"
+fi
+
 # 인증서 발급 시도
 if [ ! -f "$CERT_PATH" ] || [ ! -f "$KEY_PATH" ]; then
   echo "[entrypoint] No existing certificate found. Attempting to issue cert for $DOMAIN ..."
@@ -115,13 +131,17 @@ echo "0 3 * * * certbot renew --quiet --deploy-hook 'nginx -s reload' $ACME_SERV
 # self-signed fallback
 if [ ! -f "$CERT_PATH" ]; then
   echo "[entrypoint] 🔧 Creating self-signed certificate for testing..."
+  
+  # 인증서 디렉토리 다시 확인 및 생성
+  mkdir -p "$CERT_DIR"
+  
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout "$KEY_PATH" \
     -out "$CERT_PATH" \
     -subj "/C=KR/ST=Seoul/L=Seoul/O=Test/CN=${DOMAIN}"
 
   if [ -f /etc/nginx/conf.d/ssl.conf.template ]; then
-    cp /etc/nginx/conf.d/ssl.conf.template /etc/nginx/conf.d/ssl.conf
+    envsubst '${DOMAIN}' < /etc/nginx/conf.d/ssl.conf.template > /etc/nginx/conf.d/ssl.conf
     nginx -s reload
     echo "[entrypoint] ✅ Self-signed certificate created and SSL enabled"
   fi

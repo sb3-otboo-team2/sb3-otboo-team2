@@ -18,8 +18,18 @@ public class WebsocketController {
 
     @MessageMapping("/direct-messages_send")
     public DirectMessageDto sendMessage(@Payload DirectMessageCreateRequest directMessageCreateRequest) {
-        log.info("sendMessage: {}", directMessageCreateRequest);
+        log.info("====================================================");
+        log.info("웹소켓 메시지 수신됨");
+        log.info("요청 내용: {}", directMessageCreateRequest);
+        log.info("senderId: {}, receiverId: {}, content: {}", 
+            directMessageCreateRequest.senderId(), 
+            directMessageCreateRequest.receiverId(), 
+            directMessageCreateRequest.content());
+        log.info("====================================================");
+        
         DirectMessageDto response = directMessageService.sendMessage(directMessageCreateRequest);
+        
+        log.info("웹소켓 메시지 처리 완료 - 응답: {}", response);
         return response;
     }
 }
