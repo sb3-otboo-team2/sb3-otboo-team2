@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Profile;
 
 @Configuration
 @EnableCaching
-@Profile({"local", "prod"})
 public class CacheConfig {
 
     @Bean
