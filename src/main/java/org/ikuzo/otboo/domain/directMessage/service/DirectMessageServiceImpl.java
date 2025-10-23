@@ -2,6 +2,7 @@ package org.ikuzo.otboo.domain.directMessage.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ikuzo.otboo.domain.directMessage.dto.DirectMessageCreateRequest;
 import org.ikuzo.otboo.domain.directMessage.dto.DirectMessageDto;
 import org.ikuzo.otboo.domain.directMessage.entity.DirectMessage;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DirectMessageServiceImpl implements DirectMessageService {
 
@@ -53,6 +55,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         DirectMessageDto dto = directMessageMapper.toDto(savedMessage);
 
         // 웹소켓 실시간 전송을 위한 이벤트 발행
+        log.info("MessageCreatedEvent 이벤트 발행 시작 - dto: {}", dto);
         eventPublisher.publishEvent(
             new MessageCreatedEvent(
                 dto, Instant.now()
