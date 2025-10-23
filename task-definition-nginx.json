@@ -32,9 +32,9 @@
         "timeout": 10
       },
       "environment": [
-        { "name": "DOMAIN", "value": "3.38.166.191.sslip.io" },
+        { "name": "DOMAIN", "value": "ikuzo.duckdns.org" },
         { "name": "EMAIL",  "value": "hokang1870@gmail.com" },
-        { "name": "CERTBOT_STAGING", "value": "true" }
+        { "name": "CERTBOT_STAGING", "value": "false" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

@@ -1,7 +1,7 @@
-FROM nginx:1.25-alpine
+FROM --platform=linux/amd64 nginx:1.25-alpine
 
-# 필요한 패키지 설치 (openssl 추가됨)
-RUN apk add --no-cache certbot curl bash cronie openssl \
+# 필요한 패키지 설치 (openssl, bind-tools 추가됨)
+RUN apk add --no-cache certbot curl bash cronie openssl bind-tools \
  && mkdir -p /var/www/certbot
 
 # 설정 및 엔트리포인트 복사
