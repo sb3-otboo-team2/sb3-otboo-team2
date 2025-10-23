@@ -21,8 +21,6 @@ spring:
       port: ${REDIS_PORT:6379}
       timeout: 3000ms
       connect-timeout: 3000ms
-      ssl:
-        enabled: true
 
 # Actuator 설정
 management:
