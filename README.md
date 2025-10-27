@@ -92,15 +92,7 @@ Otboo는 사용자의 **보유 의상 + 날씨 + 취향**을 바탕으로 상황
 ---
 
 ## 스크린샷·시연 영상
-| 화면 | 설명 |
-|---|---|
-| <img width="1000" height="1000" alt="image" src="https://github.com/user-attachments/assets/64c0f808-e39f-40a8-aa22-548ba8fa90de" />
- | 메인/피드 |
-| ![](https://via.placeholder.com/960x540?text=Wardrobe) | 옷장 관리 |
-| ![](https://via.placeholder.com/960x540?text=Recommendations) | 추천 결과(점수/사유 표시) |
-| [🎬 시연 영상](https://youtu.be/your-demo) | end-to-end 플로우 |
-
----
+[시연영상 보려가기](https://drive.google.com/file/d/1U_vjqKZW9kpxipU8Od90ru9OwPeNoIfW/view?usp=sharing)
 
 ## 환경 변수
 | 키 | 예시 | 설명 |
