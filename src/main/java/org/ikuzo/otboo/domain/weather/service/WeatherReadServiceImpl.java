@@ -59,6 +59,12 @@ public class WeatherReadServiceImpl implements WeatherReadService {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HHmm");
 
+    public String buildCacheKey(double latitude, double longitude) {
+        XY xy = KmaGridConverter.toXY(latitude, longitude);
+        Map<String, String> base = weatherApiClient.computeBaseDateTime(Instant.now());
+        return xy.x() + ":" + xy.y() + ":" + base.get("baseDate") + ":" + base.get("baseTime");
+    }
+
     /**
      * GET /api/weathers/location
      */
@@ -98,7 +104,7 @@ public class WeatherReadServiceImpl implements WeatherReadService {
     @Override
     @Transactional
     @Cacheable(value = "weatherByCoordinates",
-        key = "T(org.ikuzo.otboo.domain.weather.util.KmaGridConverter).toCacheKey(#latitude, #longitude)")
+        key = "#root.target.buildCacheKey(#latitude, #longitude)")
     public List<WeatherDto> getWeatherByCoordinates(double latitude, double longitude) {
         log.debug("[WeatherReadService] 날씨 조회 시작: lat={}, lon={}", latitude, longitude);
         XY xy = KmaGridConverter.toXY(latitude, longitude);
