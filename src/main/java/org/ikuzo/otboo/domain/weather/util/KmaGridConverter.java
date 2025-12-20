@@ -48,6 +48,11 @@ public final class KmaGridConverter {
         return new XY(x, y);
     }
 
+    public static String toCacheKey(double lat, double lon) {
+        XY xy = toXY(lat, lon);
+        return xy.x() + ":" + xy.y();
+    }
+
     public record XY(int x, int y) {
     }
 }
